@@ -4,9 +4,10 @@ import logging
 
 from pydantic import ValidationError
 
-from fiscal_worker.domain.errors import ExtractionError, PermanentError
+from fiscal_worker.domain.errors import ExtractionError, PermanentError, TransientError
 from fiscal_worker.domain.events import DocumentReceivedPayload, EventEnvelope, EventType, Stage
 from fiscal_worker.messaging.protocols import IncomingMessage
+from fiscal_worker.messaging.topology import retry_delay_ms
 from fiscal_worker.publishers.event_publisher import EventPublisher
 from fiscal_worker.services.extraction_service import ExtractionService
 
@@ -19,8 +20,9 @@ FIRST_ATTEMPT = 1
 class DocumentConsumer:
     """Returning normally means "acknowledge": every outcome was already confirmed on a queue.
 
-    Until the retry topology exists (phase F3), every failure goes straight to the dead-letter
-    queue with its class in the headers, so nothing is dropped or redelivered in a loop.
+    A transient failure is parked for a retry while there are retries left (BACKEND.md §5.5).
+    Everything else goes to the dead-letter queue with its class in the headers, so nothing is
+    dropped or redelivered in a loop.
     """
 
     def __init__(self, service: ExtractionService, publisher: EventPublisher) -> None:
@@ -50,7 +52,14 @@ class DocumentConsumer:
                 error,
                 error.__cause__,
             )
-            await self._publisher.dead_letter(incoming, error, envelope.attempt, document_key)
+            delay_ms = retry_delay_ms(envelope.attempt) if isinstance(error, TransientError) else None
+            if delay_ms is None:
+                await self._publisher.dead_letter(incoming, error, envelope.attempt, document_key)
+                return
+            # Progress first: if the worker dies in between, the redelivery announces and parks again,
+            # and the backend drops the repeated announcement.
+            await self._publisher.retry_wait(envelope, incoming, error, delay_ms)
+            await self._publisher.retry(envelope, incoming, delay_ms)
             return
         except Exception as error:
             log.exception("%s failed with an unexpected error", envelope.document_code)

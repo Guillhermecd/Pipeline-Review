@@ -1,0 +1,52 @@
+{
+  "retryBackoffMs": [1000, 2000, 4000],
+  "kafka": {
+    "partitions": 3,
+    "consumerGroup": "extrator-py",
+    "notBeforeHeader": "x-not-before",
+    "topics": {
+      "input": "documentos.recebidos",
+      "retry": "documentos.recebidos-retry",
+      "output": "documentos.extraidos",
+      "progress": "documentos.progresso",
+      "deadLetter": "documentos.recebidos.DLT"
+    }
+  },
+  "rabbitmq": {
+    "exchange": "documentos",
+    "exchangeType": "direct",
+    "prefetch": 10,
+    "queues": {
+      "input": "extracao.q",
+      "output": "validacao.q",
+      "progress": "progresso.q",
+      "deadLetter": "extracao.dlq"
+    },
+    "retryQueues": [
+      {
+        "name": "extracao.retry.1s",
+        "arguments": {
+          "x-message-ttl": 1000,
+          "x-dead-letter-exchange": "documentos",
+          "x-dead-letter-routing-key": "extracao.q"
+        }
+      },
+      {
+        "name": "extracao.retry.2s",
+        "arguments": {
+          "x-message-ttl": 2000,
+          "x-dead-letter-exchange": "documentos",
+          "x-dead-letter-routing-key": "extracao.q"
+        }
+      },
+      {
+        "name": "extracao.retry.4s",
+        "arguments": {
+          "x-message-ttl": 4000,
+          "x-dead-letter-exchange": "documentos",
+          "x-dead-letter-routing-key": "extracao.q"
+        }
+      }
+    ]
+  }
+}

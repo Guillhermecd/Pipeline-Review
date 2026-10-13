@@ -39,6 +39,10 @@ class MessageBroker(Protocol):
         """Returns only after the broker confirmed the write."""
         ...
 
+    async def publish_retry(self, message: OutgoingMessage, delay_ms: int) -> None:
+        """Parks the message so it comes back on the input queue after `delay_ms`."""
+        ...
+
     async def consume(self, handler: MessageHandler) -> None:
         """Runs until cancelled. A message is acknowledged only after `handler` returns; if it
         raises, the message is delivered again."""

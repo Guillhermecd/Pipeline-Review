@@ -8,12 +8,12 @@ import contextlib
 import json
 from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 import pytest
 import pytest_asyncio
 from jsonschema import Draft202012Validator
-from probes import KafkaProbe, Probe, RabbitProbe
 from testcontainers.community.kafka import KafkaContainer
 from testcontainers.community.rabbitmq import RabbitMqContainer
 
@@ -29,6 +29,7 @@ from fiscal_worker.messaging.topology import QueueRole
 from fiscal_worker.publishers.event_publisher import EventPublisher
 from fiscal_worker.services.extraction_service import ExtractionService
 from generate_samples import render_pdf
+from probes import KafkaProbe, Probe, RabbitProbe
 from sample_data import SAMPLES_BY_KEY
 from support import TRACEPARENT, FakeFileStore, FakeLlm, FakeQrReader, load_schema, received_envelope, truth
 
@@ -37,6 +38,12 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="module")]
 SAMPLE = SAMPLES_BY_KEY["s4"]
 FILE_KEY = "documents/abc/nota.pdf"
 QUIET_SECONDS = 6.0
+# How late a retry may come back: broker round trip plus the consumer picking it up.
+BACKOFF_SLACK_SECONDS = 4.0
+
+
+def occurred_at(message: dict[str, Any]) -> datetime:
+    return datetime.fromisoformat(message["occurredAt"])
 
 
 @dataclass
@@ -181,21 +188,72 @@ async def test_permanent_failure_goes_straight_to_the_dead_letter_queue(environm
     assert headers["traceparent"] == TRACEPARENT
     assert results == []
     assert llm.received_text == []
+    progress = await environment.probe.collect(QueueRole.PROGRESS, document_id, 2, wait=2)
+    assert [message["payload"]["stage"] for message, _ in progress] == ["OCR"]
 
 
-async def test_transient_failure_is_dead_lettered_with_its_class(environment: Environment) -> None:
-    """Until the retry topology exists (phase F3) a transient failure is parked, not dropped."""
-    llm = FakeLlm(error=TransientError("LLM 503 Service Unavailable"))
+async def test_transient_failure_is_retried_with_backoff_until_it_succeeds(environment: Environment) -> None:
+    llm = FakeLlm(extraction=truth(SAMPLE), error=TransientError("LLM 503 Service Unavailable"), failures=2)
     broker = environment.new_broker()
     envelope = received_envelope(environment.kind)
+    document_id = envelope["documentId"]
 
     async with running(broker, consumer_for(broker, llm, render_pdf(SAMPLE)).handle):
         await send(environment, envelope)
-        dead = await environment.probe.collect(QueueRole.DEAD_LETTER, envelope["documentId"], 1)
+        results = await environment.probe.collect(QueueRole.OUTPUT, document_id, 1)
+        progress = [body for body, _ in await environment.probe.collect(QueueRole.PROGRESS, document_id, 8)]
+        dead = await environment.probe.collect(QueueRole.DEAD_LETTER, document_id, 1, wait=2)
+
+    assert len(results) == 1
+    body, headers = results[0]
+    assert body["attempt"] == 3
+    assert body["requestId"] == envelope["requestId"]
+    assert headers["traceparent"] == TRACEPARENT
+    assert dead == []
+    assert len(llm.received_text) == 3
+    assert [(message["payload"]["stage"], message["attempt"]) for message in progress] == [
+        ("OCR", 1),
+        ("EXTRACTING", 1),
+        ("RETRY_WAIT", 1),
+        ("OCR", 2),
+        ("EXTRACTING", 2),
+        ("RETRY_WAIT", 2),
+        ("OCR", 3),
+        ("EXTRACTING", 3),
+    ]
+    # The wait announced is the wait observed: the next attempt starts no sooner than the backoff.
+    for waiting, next_attempt in ((progress[2], progress[3]), (progress[5], progress[6])):
+        announced = waiting["payload"]["retryInMs"] / 1000
+        waited = (occurred_at(next_attempt) - occurred_at(waiting)).total_seconds()
+        assert announced <= waited < announced + BACKOFF_SLACK_SECONDS
+    assert [progress[2]["payload"]["retryInMs"], progress[5]["payload"]["retryInMs"]] == [1000, 2000]
+
+
+async def test_fourth_transient_failure_goes_to_the_dead_letter_queue(environment: Environment) -> None:
+    llm = FakeLlm(error=TransientError("LLM 503 Service Unavailable"))
+    broker = environment.new_broker()
+    envelope = received_envelope(environment.kind)
+    document_id = envelope["documentId"]
+
+    async with running(broker, consumer_for(broker, llm, render_pdf(SAMPLE)).handle):
+        await send(environment, envelope)
+        dead = await environment.probe.collect(QueueRole.DEAD_LETTER, document_id, 1)
+        progress = [body for body, _ in await environment.probe.collect(QueueRole.PROGRESS, document_id, 11)]
+        results = await environment.probe.collect(QueueRole.OUTPUT, document_id, 1, wait=2)
 
     assert len(dead) == 1
-    assert dead[0][1]["x-error"] == "LLM 503 Service Unavailable"
-    assert dead[0][1]["x-error-class"] == "TransientError"
+    body, headers = dead[0]
+    assert body["eventType"] == "documento.retry"
+    assert body["attempt"] == 4
+    assert body["requestId"] == envelope["requestId"]
+    assert headers["x-error"] == "LLM 503 Service Unavailable"
+    assert headers["x-error-class"] == "TransientError"
+    assert headers["x-attempts"] == "4"
+    assert headers["traceparent"] == TRACEPARENT
+    assert results == []
+    assert len(llm.received_text) == 4
+    waits = [message["payload"] for message in progress if message["payload"]["stage"] == "RETRY_WAIT"]
+    assert [(wait["attempt"], wait["retryInMs"]) for wait in waits] == [(1, 1000), (2, 2000), (3, 4000)]
 
 
 async def test_poison_message_is_dead_lettered_and_the_consumer_keeps_going(environment: Environment) -> None:
