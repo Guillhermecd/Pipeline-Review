@@ -46,12 +46,13 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def upload(arguments: argparse.Namespace) -> dict[str, Any]:
-    """Uploads the file. A trailing comment makes the bytes unique, so a rerun is not a 409."""
+    """Uploads the file. Trailing bytes make the content unique, so a rerun is not a 409.
+
+    PDF readers ignore a comment after `%%EOF`, and image decoders ignore bytes after the end marker.
+    """
     path: Path = arguments.document
     mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    content = path.read_bytes()
-    if mime_type == "application/pdf":
-        content += f"\n% smoke {uuid4()}\n".encode()
+    content = path.read_bytes() + f"\n% smoke {uuid4()}\n".encode()
     with httpx.Client(base_url=arguments.api, timeout=30) as client:
         login = client.post(
             "/api/auth/login", json={"email": arguments.email, "password": arguments.password}

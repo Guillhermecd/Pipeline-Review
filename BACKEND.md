@@ -211,7 +211,7 @@ S3_SECRET_ACCESS_KEY=change-me
 OTEL_SERVICE_NAME=fiscal-worker
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 GEMINI_API_KEY=
-LLM_MODEL=gemini-2.5-flash
+LLM_MODEL=gemini-3.5-flash-lite
 LLM_TIMEOUT_SECONDS=30
 OCR_LANG=pt
 ```

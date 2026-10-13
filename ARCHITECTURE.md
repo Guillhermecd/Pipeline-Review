@@ -59,6 +59,7 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **oneDNN desligado no PaddleOCR.** O PaddlePaddle 3.3 falha em CPU com oneDNN (`ConvertPirAttribute2RuntimeAttribute not support`). Com `enable_mkldnn=False` funciona, mais lento: de 8 a 21 s por imagem nesta máquina.
 - **Um só pacote OpenCV.** `opencv-contrib-python`, o mesmo que o PaddleOCR traz. Dois pacotes `opencv-*` dividem o módulo `cv2` e quebram o import.
 - **Gemini sem retry do SDK.** `HttpRetryOptions(attempts=1)`: quem repete é o broker. Retries empilhados se multiplicariam.
+- **Modelo padrão `gemini-3.5-flash-lite`.** `gemini-2.5-flash` foi aposentado (404). Em 13/10/2026 os modelos `flash` da série 3 levaram de 25 a 90 s por chamada, com 503 e 504 frequentes; o `flash-lite` respondeu em 1 a 2 s com o mesmo resultado nas amostras. A confiança vem da conferência do valor contra o texto do documento, não do modelo. Troca por `LLM_MODEL`.
 - **Modelos do OCR** são baixados na primeira execução (Hugging Face) e ficam em `~/.paddlex`.
 
 ## Upload e idempotência
