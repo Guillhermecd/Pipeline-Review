@@ -1,0 +1,97 @@
+# Serviços locais do Pipeline Fiscal.
+# Portas do host deslocadas para não colidir com outros projetos na mesma máquina
+# (ver BACKEND.md §3). Dentro da rede do compose as portas são as padrão.
+name: pipeline-fiscal
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pipeline-fiscal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pipeline_fiscal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5442:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pipeline_fiscal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # A MinIO deixou de publicar minio/minio no Docker Hub; a Chainguard distribui o mesmo servidor.
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: pipeline-fiscal-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9050:9000"
+      - "9051:9001"
+    volumes:
+      - minio-data:/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: pipeline-fiscal-mailpit
+    restart: unless-stopped
+    ports:
+      - "1035:1025"
+      - "8035:8025"
+
+  # KRaft, 1 nó. `localhost:9092` para processos no host, `kafka:29092` dentro da rede.
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: pipeline-fiscal-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: HOST://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pipeline-fiscal-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: pipeline-fiscal-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+
+volumes:
+  postgres-data:
+  minio-data:
+  kafka-data:
