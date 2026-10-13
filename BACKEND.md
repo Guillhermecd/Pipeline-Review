@@ -39,7 +39,7 @@ Copiar esta tabela para o `ARCHITECTURE.md` na fase F1, como o template exige.
 | Banco | **PostgreSQL** + `spring-boot-starter-data-jpa` + Hibernate, migrações com **Flyway** | Relações documento → itens → validações; transações ACID para o outbox; `ddl-auto=validate` do template |
 | Worker | **Python 3.12** com `uv` | Ecossistema de OCR e LLM |
 | OCR | **PaddleOCR** + pré-processamento OpenCV; **PyMuPDF** para PDF com camada de texto; **pyzbar** para QR Code de NFC-e | Decisão do design; PaddleOCR lida melhor com cupom térmico e foto torta |
-| LLM | API com saída em **JSON Schema** (provedor em aberto, ver §14) | Estrutura itens e campos a partir do texto do OCR |
+| LLM | **Google Gemini**, saída em **JSON Schema** (ver §14) | Estrutura itens e campos a partir do texto do OCR |
 | Broker | **Kafka e RabbitMQ intercambiáveis** atrás de uma abstração (`MessagingPort`) | Requisito do design ("Abstração de broker", fase F3) e diferencial do simulador de mensageria |
 | Retry | 3 retries com backoff **1 s · 2 s · 4 s**; a 4ª falha vai para a DLQ | Valores mostrados na tela DLQ |
 | Idempotência | `idempotency_key = SHA-256 do arquivo`, UNIQUE no banco; reenvio responde **409** | Tela de Upload |
@@ -160,12 +160,14 @@ docker compose -f docker-compose.dev.yml up -d postgres minio mailpit kafka rabb
 
 | Serviço | Endereço | Observação |
 |---|---|---|
-| PostgreSQL | `localhost:5432` | Obrigatório no boot (template) |
-| MinIO | `http://localhost:9000` · console `:9001` | Bucket `pipeline-fiscal` |
-| Mailpit | SMTP `127.0.0.1:1025` · UI `:8025` | Template |
+| PostgreSQL | `localhost:5442` | Obrigatório no boot (template). Banco `pipeline_fiscal` |
+| MinIO | `http://localhost:9050` · console `:9051` | Bucket `pipeline-fiscal`. Imagem `cgr.dev/chainguard/minio` (a `minio/minio` saiu do Docker Hub) |
+| Mailpit | SMTP `127.0.0.1:1035` · UI `:8035` | Template |
 | Kafka (KRaft, 1 nó) | `localhost:9092` | Tópicos com 3 partições |
-| RabbitMQ | `amqp://localhost:5672` · UI `:15672` | Imagem `rabbitmq:3-management` |
+| RabbitMQ | `amqp://localhost:5673` · UI `:15673` | Imagem `rabbitmq:3-management` |
 | Jaeger all-in-one | UI `:16686` · OTLP gRPC `:4317` · HTTP `:4318` | Recebe direto do Java e do Python |
+
+As portas do host de Postgres, MinIO, Mailpit e RabbitMQ estão deslocadas para conviver com outros projetos na mesma máquina. Dentro da rede do compose as portas são as padrão.
 
 Os dois brokers sobem juntos: o broker ativo é escolhido em tempo de execução (§5.1). Falha no MinIO, Mailpit, Jaeger ou no broker **inativo** gera só warning, seguindo a regra do template.
 
@@ -179,7 +181,7 @@ UPLOAD_MAX_SIZE_MB=10
 
 BROKER_DEFAULT=kafka                       # kafka | rabbitmq
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-RABBITMQ_URL=amqp://guest:guest@localhost:5672
+RABBITMQ_URL=amqp://guest:guest@localhost:5673
 
 REVIEW_CONFIDENCE_THRESHOLD=0.85
 RETRY_BACKOFF_MS=1000,2000,4000
@@ -198,8 +200,8 @@ DEMO_AUTO_TRAFFIC_INTERVAL_MS=3200          # só no perfil demo
 
 ```env
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-RABBITMQ_URL=amqp://guest:guest@localhost:5672
-S3_ENDPOINT=http://localhost:9000
+RABBITMQ_URL=amqp://guest:guest@localhost:5673
+S3_ENDPOINT=http://localhost:9050
 S3_BUCKET=pipeline-fiscal
 S3_ACCESS_KEY_ID=worker-readonly
 S3_SECRET_ACCESS_KEY=change-me
@@ -728,7 +730,7 @@ cd frontend && npm run lint && npm run format:check && npm run build
 
 | Item | Por que importa | Encaminhamento sugerido |
 |---|---|---|
-| Provedor de LLM | Recibos podem conter CPF e nome de pessoa física (LGPD) e o custo varia muito | Mascarar CPF antes da chamada (extrair por regex localmente) ou usar modelo local; registrar no `ARCHITECTURE.md` |
+| Provedor de LLM | Recibos podem conter CPF e nome de pessoa física (LGPD) e o custo varia muito | **Decidido: Google Gemini.** Mascarar CPF antes da chamada (extrair por regex localmente); registrado no `ARCHITECTURE.md` |
 | Datas como texto no banco | O README manda ISO string; `timestamptz` seria mais seguro para filtros e fuso | Seguir o README. Se mudar, mudar no template para todos os projetos, não só aqui |
 | Formato de mensagem do simulador | O `SimulatorForwarder` precisa do formato que o simulador de mensageria espera em `ws://localhost:8090/events` | Conferir no repositório do simulador antes da F6 |
 | Amostras sintéticas | A tela Upload e o perfil `demo` precisam de arquivos reais das 6 amostras | Gerar PDFs/imagens sintéticos (sem dados reais) na F2 |

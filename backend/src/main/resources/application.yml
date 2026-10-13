@@ -1,0 +1,60 @@
+server:
+  port: ${SERVER_PORT:1337}
+  tomcat:
+    # Sem isto o Tomcat derruba a conexão em uploads acima do limite e o cliente não recebe o 413.
+    max-swallow-size: -1
+
+spring:
+  application:
+    name: fiscal-pipeline
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5442/pipeline_fiscal}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_SIZE_MB:10}MB
+      max-request-size: ${UPLOAD_MAX_SIZE_MB:10}MB
+  mail:
+    host: ${SMTP_HOST:127.0.0.1}
+    port: ${SMTP_PORT:1035}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:change-me-must-be-at-least-32-characters-long}
+    jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+  initial-user:
+    email: ${INITIAL_USER_EMAIL:admin@oaksd.local}
+    password: ${INITIAL_USER_PASSWORD:ChangeMe123!}
+    name: ${INITIAL_USER_NAME:Administrador}
+  storage:
+    endpoint: ${S3_ENDPOINT:http://localhost:9050}
+    region: ${S3_REGION:us-east-1}
+    bucket: ${S3_BUCKET:pipeline-fiscal}
+    access-key-id: ${S3_ACCESS_KEY_ID:minioadmin}
+    secret-access-key: ${S3_SECRET_ACCESS_KEY:minioadmin}
+    force-path-style: ${S3_FORCE_PATH_STYLE:true}
+    presigned-url-expires-in: ${S3_PRESIGNED_URL_EXPIRES_IN:900}
+  email:
+    enabled: ${EMAIL_ENABLED:true}
+    from: ${EMAIL_FROM:no-reply@oaksd.local}
+  pipeline:
+    upload-max-size-mb: ${UPLOAD_MAX_SIZE_MB:10}
+    broker-default: ${BROKER_DEFAULT:kafka}
+    review-confidence-threshold: ${REVIEW_CONFIDENCE_THRESHOLD:0.85}

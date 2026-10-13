@@ -1,0 +1,4 @@
+logging:
+  level:
+    com.bimd.fiscalpipeline: DEBUG
+    org.hibernate.SQL: DEBUG
