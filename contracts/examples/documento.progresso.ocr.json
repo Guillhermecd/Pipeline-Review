@@ -1,0 +1,16 @@
+{
+  "eventId": "c2a1f0de-8b3a-4f57-a6c1-0d9e8f7a6b5c",
+  "eventType": "documento.progresso",
+  "schemaVersion": 1,
+  "documentId": "3f3e5405-ac3f-48a8-827a-574cc2661fa2",
+  "documentCode": "DOC-1001",
+  "idempotencyKey": "sha256:afc5ab14d3622a997d11f1b849ae167e3f02dee6f8dfb4b502008e59fd3d97d6",
+  "requestId": "4228b572-9853-4424-8565-8298820e0831",
+  "attempt": 1,
+  "broker": "kafka",
+  "occurredAt": "2026-10-13T14:37:23.890Z",
+  "payload": {
+    "stage": "OCR",
+    "attempt": 1
+  }
+}

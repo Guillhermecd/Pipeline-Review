@@ -1,0 +1,30 @@
+{
+  "eventId": "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d",
+  "eventType": "documento.extraido",
+  "schemaVersion": 1,
+  "documentId": "3f3e5405-ac3f-48a8-827a-574cc2661fa2",
+  "documentCode": "DOC-1001",
+  "idempotencyKey": "sha256:afc5ab14d3622a997d11f1b849ae167e3f02dee6f8dfb4b502008e59fd3d97d6",
+  "requestId": "4228b572-9853-4424-8565-8298820e0831",
+  "attempt": 1,
+  "broker": "kafka",
+  "occurredAt": "2026-10-13T14:37:26.120Z",
+  "payload": {
+    "documentKind": "NF-e",
+    "fields": {
+      "cnpj": { "value": "60.701.190/0001-04", "confidence": 0.95, "source": "pdf_text" },
+      "issuer": { "value": "Papelaria Ponto Final", "confidence": 0.95, "source": "pdf_text" },
+      "issueDate": { "value": "2026-09-28", "confidence": 0.95, "source": "pdf_text" },
+      "total": { "value": "283.80", "confidence": 0.95, "source": "pdf_text" }
+    },
+    "items": [
+      { "description": "Resma A4 75g", "quantity": "5", "unitPrice": "29.90" },
+      { "description": "Caneta gel (cx 12)", "quantity": "2", "unitPrice": "38.50" },
+      { "description": "Pasta catálogo", "quantity": "4", "unitPrice": "11.20" }
+    ],
+    "itemsConfidence": 0.95,
+    "ocrEngine": "pdf_text",
+    "llmModel": "gemini-2.5-flash",
+    "tokens": { "input": 1830, "output": 412 }
+  }
+}
