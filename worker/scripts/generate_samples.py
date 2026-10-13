@@ -15,6 +15,7 @@ import numpy as np
 import pymupdf
 import segno
 from PIL import Image, ImageFilter
+
 from sample_data import SAMPLES, Sample
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

@@ -41,6 +41,26 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **JWT por query string só no SSE.** O filtro aceita `?access_token=` apenas em `/api/v1/eventos`, porque `EventSource` não envia `Authorization`. Nas demais rotas o token só vale no header.
 - **Testes de integração com `*IT`.** Rodam no `maven-failsafe-plugin` (fase `verify`) com Testcontainers; precisam de Docker.
 
+## Worker: decisões da extração
+
+- **Confiança de valor em PDF com texto: 0,95.** A camada de texto não tem score de reconhecimento. Um valor devolvido pelo LLM que aparece nela recebe 0,95 e `source = pdf_text`.
+- **Comparação normalizada.** O LLM devolve `283.80` e `2026-09-28`; o documento imprime `283,80` e `28/09/2026`. O valor é procurado no texto em todas as formas impressas possíveis, sem acento e sem diferença de maiúsculas. Sem isso todo número cairia em 0,3 (alucinação).
+- **Confiança em imagem.** Média do score do PaddleOCR nas linhas onde o valor aparece. Valor quebrado em mais de uma linha usa a média da página.
+- **Itens.** Cada linha vale o menor entre a confiança da descrição e a do preço unitário; `itemsConfidence` é a média das linhas.
+- **QR Code vence o texto.** O CNPJ lido da chave de acesso da NFC-e substitui o do LLM, com confiança 1,0.
+- **CPF mascarado antes do LLM.** CPF formatado, ou 11 dígitos precedidos do rótulo "CPF", vira `***.***.***-**`. CNPJ e chave de acesso passam intactos.
+- **Sem binarização.** O pré-processamento endireita a imagem e equaliza o contraste (CLAHE). A binarização prevista apaga traços finos de cupom térmico e derruba o score do OCR.
+- **Falhas vão direto para a DLQ (provisório).** Até a fase F3 criar o retry 1 s · 2 s · 4 s, falha transitória também vai para a DLQ, com a classe no header `x-error-class`. Nada é descartado nem reentregue em laço.
+- **Erro inesperado também vai para a DLQ.** Um bug no worker não pode reentregar o mesmo documento para sempre. Só falha ao publicar no broker deixa a mensagem sem ack.
+- **`storage/` no worker.** Pasta a mais em relação à estrutura do `BACKEND.md`, para a leitura do arquivo no MinIO.
+
+## Worker: dependências
+
+- **oneDNN desligado no PaddleOCR.** O PaddlePaddle 3.3 falha em CPU com oneDNN (`ConvertPirAttribute2RuntimeAttribute not support`). Com `enable_mkldnn=False` funciona, mais lento: de 8 a 21 s por imagem nesta máquina.
+- **Um só pacote OpenCV.** `opencv-contrib-python`, o mesmo que o PaddleOCR traz. Dois pacotes `opencv-*` dividem o módulo `cv2` e quebram o import.
+- **Gemini sem retry do SDK.** `HttpRetryOptions(attempts=1)`: quem repete é o broker. Retries empilhados se multiplicariam.
+- **Modelos do OCR** são baixados na primeira execução (Hugging Face) e ficam em `~/.paddlex`.
+
 ## Upload e idempotência
 
 1. A API calcula o SHA-256 do arquivo. Se já existe documento com essa chave, responde 409 e nada é criado.

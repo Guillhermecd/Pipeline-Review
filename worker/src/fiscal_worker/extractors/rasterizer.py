@@ -44,11 +44,11 @@ def _render_pdf(content: bytes) -> list[Image]:
 def _page_to_image(page: pymupdf.Page) -> Image:
     pixmap = page.get_pixmap(dpi=RENDER_DPI, alpha=False)
     rgb = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, pixmap.n)
-    return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    return np.asarray(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), dtype=np.uint8)
 
 
 def _decode_image(content: bytes) -> Image:
     image = cv2.imdecode(np.frombuffer(content, dtype=np.uint8), cv2.IMREAD_COLOR)
     if image is None:
         raise PermanentError("arquivo corrompido: imagem ilegível")
-    return image
+    return np.asarray(image, dtype=np.uint8)

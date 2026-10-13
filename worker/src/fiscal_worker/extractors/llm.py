@@ -20,7 +20,10 @@ RESPONSE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "documentKind": {"type": "string", "enum": ["NF-e", "NFC-e", "NFS-e", "Recibo", "Cupom"]},
-        "cnpj": {**_NULLABLE_STRING, "description": "CNPJ do emitente como impresso, ex.: 60.701.190/0001-04"},
+        "cnpj": {
+            **_NULLABLE_STRING,
+            "description": "CNPJ do emitente como impresso, ex.: 60.701.190/0001-04",
+        },
         "issuer": {**_NULLABLE_STRING, "description": "Nome ou razão social do emitente, como impresso"},
         "issueDate": {**_NULLABLE_STRING, "description": "Data de emissão no formato AAAA-MM-DD"},
         "total": {**_NULLABLE_STRING, "description": "Valor total com ponto decimal e 2 casas, ex.: 283.80"},
@@ -92,7 +95,9 @@ class GeminiExtractor:
             response_json_schema=RESPONSE_SCHEMA,
         )
         try:
-            return await self._client.aio.models.generate_content(model=self._model, contents=prompt, config=config)
+            return await self._client.aio.models.generate_content(
+                model=self._model, contents=prompt, config=config
+            )
         except errors.APIError as error:
             raise _classify(error) from error
         except (httpx.TimeoutException, TimeoutError) as error:

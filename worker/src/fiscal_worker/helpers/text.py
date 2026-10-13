@@ -17,7 +17,3 @@ def fold(text: str) -> str:
 def alphanumeric(text: str) -> str:
     """Only letters and digits, upper case: '12.ABC.345/01DE-35' -> '12ABC34501DE35'."""
     return _NON_ALPHANUMERIC.sub("", text).upper()
-
-
-def without_spaces(text: str) -> str:
-    return _WHITESPACE.sub("", text)

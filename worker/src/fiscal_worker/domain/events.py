@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -57,3 +57,9 @@ class ProgressPayload(ContractModel):
     attempt: int = Field(ge=1)
     error: str | None = None
     retry_in_ms: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _retry_wait_explains_itself(self) -> "ProgressPayload":
+        if self.stage is Stage.RETRY_WAIT and (self.error is None or self.retry_in_ms is None):
+            raise ValueError("RETRY_WAIT requires error and retryInMs")
+        return self

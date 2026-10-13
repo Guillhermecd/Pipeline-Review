@@ -75,7 +75,7 @@ class RabbitMqBroker:
                 headers = {name: str(value) for name, value in (delivery.headers or {}).items()}
                 try:
                     await handler(IncomingMessage(body=delivery.body, headers=headers, broker=self.kind))
-                except Exception:  # noqa: BLE001 - logged and redelivered, never dropped
+                except Exception:
                     log.exception("Handler failed; the message goes back to the queue")
                     await asyncio.sleep(REDELIVERY_DELAY_SECONDS)
                     await delivery.nack(requeue=True)

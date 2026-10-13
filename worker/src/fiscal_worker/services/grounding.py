@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from statistics import fmean
 
 from fiscal_worker.domain.extraction import DocumentText, FieldSource
-from fiscal_worker.helpers.text import alphanumeric, fold, without_spaces
+from fiscal_worker.helpers.text import alphanumeric, fold
 
 QR_CODE_CONFIDENCE = 1.0
 # A PDF text layer has no recognition score. A value found in it is as reliable as the layer itself.
@@ -43,14 +43,17 @@ def matches_words(value: str) -> Matcher:
 
 
 def matches_number(variants: Sequence[str]) -> Matcher:
-    """Any printed form of a number, never as part of a longer one ('5,00' is not in '15,00')."""
-    patterns = [re.compile(rf"(?<!\d){re.escape(variant)}(?!\d)") for variant in variants]
+    """Any printed form of a number, never as part of a longer one ('5,00' is not in '15,00').
 
-    def matcher(text: str) -> bool:
-        compact = without_spaces(text)
-        return any(pattern.search(compact) for pattern in patterns)
+    OCR may put spaces around a separator ('283, 80'). Spaces are tolerated there only: removing
+    them from the whole line would glue neighbouring columns together ('38,2 6,19').
+    """
+    patterns = [re.compile(rf"(?<![\d.,]){_spaced(variant)}(?!\d)") for variant in variants]
+    return lambda text: any(pattern.search(text) for pattern in patterns)
 
-    return matcher
+
+def _spaced(number: str) -> str:
+    return "".join(char if char.isdigit() else rf"\s*{re.escape(char)}\s*" for char in number)
 
 
 class TextGrounding:
@@ -72,7 +75,9 @@ class TextGrounding:
     def _score_ocr(self, appears_in: Matcher) -> Score:
         """Mean recognition score of the lines holding the value, or of the page when it spans lines."""
         lines = self._document.lines
-        matching = [line.confidence for line in lines if line.confidence is not None and appears_in(line.text)]
+        matching = [
+            line.confidence for line in lines if line.confidence is not None and appears_in(line.text)
+        ]
         if matching:
             return Score(fmean(matching), FieldSource.OCR)
         every = [line.confidence for line in lines if line.confidence is not None]

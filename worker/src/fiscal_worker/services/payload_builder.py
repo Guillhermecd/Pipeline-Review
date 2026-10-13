@@ -69,7 +69,9 @@ def _field(value: str | None, grounding: TextGrounding, matcher_for: MatcherFact
 
 
 def _to_field(value: str | None, score: Score) -> ExtractedField:
-    return ExtractedField(value=value, confidence=round(score.confidence, CONFIDENCE_DECIMALS), source=score.source)
+    return ExtractedField(
+        value=value, confidence=round(score.confidence, CONFIDENCE_DECIMALS), source=score.source
+    )
 
 
 def _items_confidence(items: list[LlmItem], grounding: TextGrounding) -> float:

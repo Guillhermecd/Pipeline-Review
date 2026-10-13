@@ -45,7 +45,7 @@ class DocumentConsumer:
             log.warning("%s failed (%s): %s", envelope.document_code, type(error).__name__, error)
             await self._publisher.dead_letter(incoming, error, envelope.attempt, document_key)
             return
-        except Exception as error:  # noqa: BLE001 - a bug must not redeliver the same document forever
+        except Exception as error:
             log.exception("%s failed with an unexpected error", envelope.document_code)
             unexpected = PermanentError(f"erro inesperado no worker: {type(error).__name__}")
             await self._publisher.dead_letter(incoming, unexpected, envelope.attempt, document_key)
@@ -63,5 +63,7 @@ def _parse(body: bytes) -> tuple[EventEnvelope, DocumentReceivedPayload]:
     except ValidationError as error:
         raise PermanentError(f"mensagem fora do schema: {error.error_count()} erro(s)") from error
     if envelope.event_type not in ACCEPTED_EVENT_TYPES:
-        raise PermanentError(f"mensagem fora do schema: eventType {envelope.event_type.value} não é de entrada")
+        raise PermanentError(
+            f"mensagem fora do schema: eventType {envelope.event_type.value} não é de entrada"
+        )
     return envelope, received

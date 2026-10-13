@@ -16,4 +16,6 @@ def extract_text_layer(content: bytes) -> DocumentText | None:
     lines = [line for line in raw_lines if line]
     if sum(len(line) for line in lines) < MIN_TEXT_CHARACTERS:
         return None
-    return DocumentText(engine="pdf_text", lines=tuple(TextLine(text=line, confidence=None) for line in lines))
+    return DocumentText(
+        engine="pdf_text", lines=tuple(TextLine(text=line, confidence=None) for line in lines)
+    )

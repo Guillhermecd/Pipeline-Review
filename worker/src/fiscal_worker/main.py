@@ -62,7 +62,7 @@ async def serve(settings: Settings) -> None:
 
 
 def run() -> None:
-    settings = Settings()  # type: ignore[call-arg]  # values come from the environment
+    settings = Settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
         asyncio.run(serve(settings))

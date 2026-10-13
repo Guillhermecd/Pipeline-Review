@@ -1,10 +1,11 @@
 """The extraction result (`documento.extraido` payload) and what the extractors hand to the service."""
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from fiscal_worker.domain.events import ContractModel
 
@@ -34,6 +35,15 @@ class ExtractedFields(ContractModel):
     issuer: ExtractedField
     issue_date: ExtractedField
     total: ExtractedField
+
+    @model_validator(mode="after")
+    def _values_are_normalised(self) -> "ExtractedFields":
+        """Dates and money travel in one format only, whatever the document printed."""
+        checks = (("issueDate", self.issue_date, ISO_DATE), ("total", self.total, DECIMAL_2))
+        for name, field, pattern in checks:
+            if field.value is not None and not re.fullmatch(pattern, field.value):
+                raise ValueError(f"{name} must match {pattern}")
+        return self
 
 
 class ExtractedItem(ContractModel):

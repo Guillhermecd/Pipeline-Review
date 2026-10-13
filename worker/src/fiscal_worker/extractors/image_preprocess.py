@@ -34,7 +34,12 @@ def _deskew(image: Image) -> Image:
     height, width = image.shape[:2]
     rotation = cv2.getRotationMatrix2D((width / 2, height / 2), angle, 1.0)
     rotated = cv2.warpAffine(
-        image, rotation, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=WHITE
+        image,
+        rotation,
+        (width, height),
+        flags=cv2.INTER_CUBIC,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=WHITE,
     )
     return np.asarray(rotated, dtype=np.uint8)
 

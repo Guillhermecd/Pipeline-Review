@@ -14,7 +14,9 @@ _TIMEOUT_SECONDS = 10
 
 
 class S3FileStore:
-    def __init__(self, endpoint: str, region: str, access_key_id: str, secret_access_key: str, bucket: str) -> None:
+    def __init__(
+        self, endpoint: str, region: str, access_key_id: str, secret_access_key: str, bucket: str
+    ) -> None:
         self._bucket = bucket
         self._client: Any = boto3.client(
             "s3",

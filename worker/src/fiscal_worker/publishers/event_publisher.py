@@ -8,7 +8,12 @@ from fiscal_worker.domain.errors import ExtractionError
 from fiscal_worker.domain.events import BrokerKind, EventEnvelope, EventType, ProgressPayload, Stage
 from fiscal_worker.domain.extraction import ExtractionPayload
 from fiscal_worker.helpers.clock import iso_now
-from fiscal_worker.messaging.protocols import TRACEPARENT_HEADER, IncomingMessage, MessageBroker, OutgoingMessage
+from fiscal_worker.messaging.protocols import (
+    TRACEPARENT_HEADER,
+    IncomingMessage,
+    MessageBroker,
+    OutgoingMessage,
+)
 from fiscal_worker.messaging.topology import QueueRole
 
 ERROR_HEADER = "x-error"
@@ -25,11 +30,17 @@ class EventPublisher:
 
     async def progress(self, source: EventEnvelope, incoming: IncomingMessage, stage: Stage) -> None:
         payload = ProgressPayload(stage=stage, attempt=source.attempt)
-        await self._send(QueueRole.PROGRESS, EventType.DOCUMENT_PROGRESS, source, incoming, payload.model_dump(
-            mode="json", by_alias=True, exclude_none=True
-        ))
+        await self._send(
+            QueueRole.PROGRESS,
+            EventType.DOCUMENT_PROGRESS,
+            source,
+            incoming,
+            payload.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
 
-    async def extracted(self, source: EventEnvelope, incoming: IncomingMessage, payload: ExtractionPayload) -> None:
+    async def extracted(
+        self, source: EventEnvelope, incoming: IncomingMessage, payload: ExtractionPayload
+    ) -> None:
         await self._send(
             QueueRole.OUTPUT,
             EventType.DOCUMENT_EXTRACTED,
@@ -48,7 +59,9 @@ class EventPublisher:
             ERROR_CLASS_HEADER: type(error).__name__,
             ATTEMPTS_HEADER: str(attempts),
         }
-        message = OutgoingMessage(key=document_key or UNKNOWN_DOCUMENT_KEY, body=incoming.body, headers=headers)
+        message = OutgoingMessage(
+            key=document_key or UNKNOWN_DOCUMENT_KEY, body=incoming.body, headers=headers
+        )
         await self._brokers[incoming.broker].publish(QueueRole.DEAD_LETTER, message)
 
     async def _send(
@@ -61,7 +74,12 @@ class EventPublisher:
     ) -> None:
         # Same requestId as received: the backend drops whatever does not match the current one.
         envelope = source.model_copy(
-            update={"event_id": uuid4(), "event_type": event_type, "occurred_at": iso_now(), "payload": payload}
+            update={
+                "event_id": uuid4(),
+                "event_type": event_type,
+                "occurred_at": iso_now(),
+                "payload": payload,
+            }
         )
         headers = {}
         if TRACEPARENT_HEADER in incoming.headers:

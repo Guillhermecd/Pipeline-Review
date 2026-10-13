@@ -71,7 +71,7 @@ class KafkaBroker:
             headers = {name: value.decode(errors="replace") for name, value in record.headers}
             try:
                 await handler(IncomingMessage(body=record.value or b"", headers=headers, broker=self.kind))
-            except Exception:  # noqa: BLE001 - logged and redelivered, never dropped
+            except Exception:
                 log.exception("Handler failed; offset %s of %s will be read again", record.offset, partition)
                 self._consumer.seek(partition, record.offset)
                 await asyncio.sleep(REDELIVERY_DELAY_SECONDS)
