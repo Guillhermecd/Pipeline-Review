@@ -42,7 +42,14 @@ class DocumentConsumer:
         try:
             payload = await self._service.extract(received, announce)
         except ExtractionError as error:
-            log.warning("%s failed (%s): %s", envelope.document_code, type(error).__name__, error)
+            # The DLQ header carries the short text; the cause (provider message, SDK error) stays here.
+            log.warning(
+                "%s failed (%s): %s | cause: %r",
+                envelope.document_code,
+                type(error).__name__,
+                error,
+                error.__cause__,
+            )
             await self._publisher.dead_letter(incoming, error, envelope.attempt, document_key)
             return
         except Exception as error:
