@@ -11,8 +11,9 @@ public class DuplicateDocumentException extends RuntimeException {
     private final UUID documentId;
     private final String code;
 
-    public DuplicateDocumentException(String idempotencyKey, UUID documentId, String code) {
-        super("idempotency_key %s já existe".formatted(idempotencyKey));
+    /** The message is shown as is in the Upload log, so it carries the short hash like the mock does. */
+    public DuplicateDocumentException(String idempotencyKey, String shortHash, UUID documentId, String code) {
+        super("idempotency_key sha256:%s… já existe".formatted(shortHash));
         this.idempotencyKey = idempotencyKey;
         this.documentId = documentId;
         this.code = code;

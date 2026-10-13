@@ -97,13 +97,14 @@ class DocumentServiceTest {
                 .isInstanceOfSatisfying(DuplicateDocumentException.class, ex -> {
                     assertThat(ex.getCode()).isEqualTo("DOC-1001");
                     assertThat(ex.getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
-                    assertThat(ex.getMessage()).isEqualTo("idempotency_key " + IDEMPOTENCY_KEY + " já existe");
+                    assertThat(ex.getMessage())
+                            .isEqualTo("idempotency_key sha256:" + HASH.substring(0, 8) + "… já existe");
                 });
 
         verifyNoInteractions(storageService, documentRegistrar);
         verify(eventPublisher).publish(
                 ServiceName.API,
-                "DOC-1001",
+                "—",
                 "409 duplicado · sha256:" + HASH.substring(0, 8) + " já processado",
                 EventLevel.WARN);
     }

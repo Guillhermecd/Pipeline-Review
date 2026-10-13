@@ -33,6 +33,7 @@ public class DocumentService {
 
     private static final String IDEMPOTENCY_PREFIX = "sha256:";
     private static final int SHORT_HASH_LENGTH = 8;
+    private static final String NO_DOCUMENT_CODE = "—";
     private static final int MAX_FILE_NAME_LENGTH = 255;
     private static final int MAX_LIST_LIMIT = 100;
     private static final String PDF_MIME_TYPE = "application/pdf";
@@ -110,12 +111,14 @@ public class DocumentService {
 
     private DuplicateDocumentException duplicateOf(Document existing, String hash) {
         String shortHash = hash.substring(0, SHORT_HASH_LENGTH);
+        // No new document exists to attach the event to; the screen shows a dash, as the mock does.
         eventPublisher.publish(
                 ServiceName.API,
-                existing.getCode(),
+                NO_DOCUMENT_CODE,
                 "409 duplicado · sha256:%s já processado".formatted(shortHash),
                 EventLevel.WARN);
-        return new DuplicateDocumentException(existing.getIdempotencyKey(), existing.getId(), existing.getCode());
+        return new DuplicateDocumentException(
+                existing.getIdempotencyKey(), shortHash, existing.getId(), existing.getCode());
     }
 
     private DocumentResponse toResponse(Document document) {

@@ -63,7 +63,8 @@ class IdempotencyIT extends AbstractIntegrationTest {
         // Same bytes under another name: the key is the content, not the file name.
         mockMvc.perform(upload("copia-da-nfe.pdf", content, token))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("idempotency_key sha256:" + hash + " já existe"))
+                .andExpect(jsonPath("$.message")
+                        .value("idempotency_key sha256:" + hash.substring(0, 8) + "… já existe"))
                 .andExpect(jsonPath("$.idempotencyKey").value("sha256:" + hash))
                 .andExpect(jsonPath("$.documentId").value(documentId.toString()))
                 .andExpect(jsonPath("$.code").value(code));
@@ -72,11 +73,14 @@ class IdempotencyIT extends AbstractIntegrationTest {
         assertThat(outboxEventRepository.count()).isEqualTo(outboxAfterFirst);
         assertThat(outboxEventRepository.findByDocumentId(documentId)).hasSize(1);
 
-        List<PipelineEventRecord> events = pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(code);
-        assertThat(events).hasSize(2);
-        assertThat(events.getLast().getMessage())
-                .isEqualTo("409 duplicado · sha256:" + hash.substring(0, 8) + " já processado");
-        assertThat(events.getLast().getLevel()).isEqualTo(EventLevel.WARN);
+        // The duplicate is logged against no document ("—"), the accepted upload against its code.
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(code)).hasSize(1);
+        List<PipelineEventRecord> duplicates = pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc("—");
+        assertThat(duplicates)
+                .filteredOn(event -> event.getMessage()
+                        .equals("409 duplicado · sha256:" + hash.substring(0, 8) + " já processado"))
+                .singleElement()
+                .satisfies(event -> assertThat(event.getLevel()).isEqualTo(EventLevel.WARN));
     }
 
     @Test
