@@ -1,0 +1,37 @@
+# Backend (Java/Maven)
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+
+# Worker (Python/uv)
+worker/.venv/
+worker/.mypy_cache/
+worker/.ruff_cache/
+worker/.pytest_cache/
+__pycache__/
+*.pyc
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Env
+.env
+backend/.env
+worker/.env
+frontend/.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local transfer archives (reference only, not shipped)
+*.zip
+*.tar.gz

@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#E2572B}a:hover{color:var(--ink,#1B1B18)}</style>
+</helmet>
+<div ref="{{rootRef}}" style="width:100%;height:100%;display:flex;flex-direction:{{dir}};background:var(--bg,#F3F1EC);color:var(--ink,#1B1B18);font-family:'Instrument Sans',system-ui,sans-serif;font-size:14px;overflow:hidden;box-sizing:border-box">
+
+<sc-if value="{{isSidebar}}" hint-placeholder-val="{{ true }}">
+<aside style="width:232px;flex-shrink:0;background:#1B1B18;color:#F3F1EC;display:flex;flex-direction:column;padding:22px 14px 18px;gap:26px;box-sizing:border-box">
+  <div style="display:flex;align-items:flex-start;gap:8px;padding:0 0 0 8px">
+  <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2572B;letter-spacing:.08em">PROJETO 05</div>
+    <div style="font-weight:600;font-size:18px;letter-spacing:-.01em">Pipeline Fiscal</div>
+    <div style="font-size:12px;color:#A9A49A">Java + Python · event-driven</div>
+  </div>
+  <button onClick="{{toggleTheme}}" title="{{themeTitle}}" aria-label="{{themeTitle}}" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid #45443E;background:transparent;border-radius:7px;cursor:pointer;color:#E8E4DA;padding:0" style-hover="background:#2A2925">
+    <sc-if value="{{isLight}}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></sc-if>
+    <sc-if value="{{isDark}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+  </button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8C877D;letter-spacing:.08em;padding:0 8px 6px">EXECUÇÃO</div>
+    <sc-for list="{{navPlan}}" as="n" hint-placeholder-count="1">
+      <button onClick="{{n.go}}" style="display:flex;align-items:center;gap:10px;border:0;cursor:pointer;text-align:left;font:inherit;padding:9px 10px;border-radius:7px;background:{{n.bg}};color:{{n.fg}}"><span style="flex:1">{{n.label}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{n.badgeFg}}">{{n.badge}}</span></button>
+    </sc-for>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8C877D;letter-spacing:.08em;padding:18px 8px 6px">PRODUTO</div>
+    <sc-for list="{{navProd}}" as="n" hint-placeholder-count="5">
+      <button onClick="{{n.go}}" style="display:flex;align-items:center;gap:10px;border:0;cursor:pointer;text-align:left;font:inherit;padding:9px 10px;border-radius:7px;background:{{n.bg}};color:{{n.fg}}"><span style="flex:1">{{n.label}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{n.badgeFg}}">{{n.badge}}</span></button>
+    </sc-for>
+  </div>
+  <div style="margin-top:auto;display:flex;flex-direction:column;gap:12px;padding:14px 10px 0;border-top:1px solid #34332E">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8C877D;letter-spacing:.08em">BROKER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#2A2925;padding:3px;border-radius:7px">
+      <sc-for list="{{brokerOpts}}" as="b" hint-placeholder-count="2">
+        <button onClick="{{b.pick}}" style="border:0;cursor:pointer;font:inherit;font-size:12.5px;padding:6px 0;border-radius:5px;background:{{b.bgDark}};color:{{b.fgDark}}">{{b.label}}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onClick="{{togglePause}}" style="flex:1;border:1px solid #45443E;background:transparent;color:#F3F1EC;cursor:pointer;font:inherit;font-size:12.5px;padding:7px 0;border-radius:6px">{{pauseLabel}}</button>
+      <button onClick="{{cycleSpeed}}" style="width:52px;border:1px solid #45443E;background:transparent;color:#F3F1EC;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 0;border-radius:6px">{{speedLabel}}</button>
+    </div>
+    <button onClick="{{toggleAuto}}" style="display:flex;align-items:center;gap:8px;border:0;background:transparent;color:#C9C4B9;cursor:pointer;font:inherit;font-size:12.5px;padding:0;text-align:left"><span style="width:8px;height:8px;border-radius:50%;background:{{autoDot}}"></span>{{autoLabel}}</button>
+  </div>
+</aside>
+</sc-if>
+
+<sc-if value="{{isTop}}" hint-placeholder-val="{{ false }}">
+<header style="min-height:58px;flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;column-gap:16px;row-gap:0;padding:0 14px;background:var(--panel,#FFFFFF);border-bottom:1px solid var(--line,#E2DED5);box-sizing:border-box">
+  <div style="display:flex;align-items:baseline;gap:10px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2572B;letter-spacing:.08em">P05</span>
+    <span style="font-weight:600;font-size:16px">Pipeline Fiscal</span>
+  </div>
+  <nav style="display:flex;gap:2px;height:58px;flex:1 0 auto">
+    <sc-for list="{{navAll}}" as="n" hint-placeholder-count="6">
+      <button onClick="{{n.go}}" style="display:flex;align-items:center;gap:7px;border:0;background:transparent;cursor:pointer;font:inherit;padding:0 10px;height:100%;white-space:nowrap;flex-shrink:0;color:{{n.fgLight}};box-shadow:{{n.underline}}"><span>{{n.label}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2572B">{{n.badge}}</span></button>
+    </sc-for>
+  </nav>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;padding:8px 0">
+    <button onClick="{{toggleAuto}}" style="display:flex;align-items:center;gap:7px;border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font:inherit;font-size:12.5px;padding:6px 10px;border-radius:6px;color:var(--ink,#1B1B18)"><span style="width:8px;height:8px;border-radius:50%;background:{{autoDot}}"></span>{{autoShort}}</button>
+    <div style="display:flex;gap:3px;background:var(--bg,#F3F1EC);padding:3px;border-radius:7px">
+      <sc-for list="{{brokerOpts}}" as="b" hint-placeholder-count="2">
+        <button onClick="{{b.pick}}" style="border:0;cursor:pointer;font:inherit;font-size:12.5px;padding:5px 12px;border-radius:5px;background:{{b.bgLight}};color:{{b.fgLight}}">{{b.label}}</button>
+      </sc-for>
+    </div>
+    <button onClick="{{togglePause}}" style="border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font:inherit;font-size:12.5px;padding:6px 12px;border-radius:6px;color:var(--ink,#1B1B18)">{{pauseLabel}}</button>
+    <button onClick="{{cycleSpeed}}" style="border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border-radius:6px;color:var(--ink,#1B1B18)">{{speedLabel}}</button>
+  </div>
+</header>
+</sc-if>
+
+<div style="flex:1;min-height:0;min-width:0;display:flex">
+<main style="flex:1;min-width:0;overflow:auto;padding:clamp(16px,2.2vw,28px) clamp(16px,2.5vw,32px) 40px;box-sizing:border-box">
+
+<sc-if value="{{isPlan}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:280px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">PLANO DE EXECUÇÃO</div>
+      <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Roadmap, requisitos e testes</h1>
+      <p style="margin:0;color:var(--muted,#6B675E);max-width:640px;text-wrap:pretty">Marque as tarefas conforme avança. Cada requisito de nível pleno acompanha as tarefas ligadas a ele.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;width:260px">
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted,#6B675E)">Progresso geral</span><span style="font-family:'JetBrains Mono',monospace">{{planDone}}/{{planTotal}} · {{planPct}}</span></div>
+      <div style="height:6px;background:var(--line,#E2DED5);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{planPct}};background:#E2572B"></div></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{phases}}" as="ph" hint-placeholder-count="6">
+        <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#E2572B">{{ph.id}}</span>
+            <span style="font-weight:600;font-size:15px">{{ph.title}}</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted,#6B675E)">{{ph.done}}/{{ph.total}}</span>
+            <div style="width:80px;height:4px;background:var(--line2,#EEEBE4);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ph.pct}};background:var(--ok,#2E7D4F)"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <sc-for list="{{ph.tasks}}" as="tk" hint-placeholder-count="4">
+              <div onClick="{{tk.toggle}}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:2px 0">
+                <span style="width:16px;height:16px;flex-shrink:0;border-radius:4px;border:1.5px solid {{tk.box}};background:{{tk.boxBg}};color:#FFFFFF;font-size:11px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">{{tk.mark}}</span>
+                <span style="flex:1;color:{{tk.fg}};text-decoration:{{tk.deco}};text-wrap:pretty">{{tk.title}}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted,#6B675E);background:var(--bg,#F3F1EC);padding:2px 6px;border-radius:4px">{{tk.tag}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#1B1B18;color:#F3F1EC;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2572B;letter-spacing:.08em">REQUISITOS DE NÍVEL PLENO</div>
+        <sc-for list="{{reqs}}" as="r" hint-placeholder-count="6">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <span style="width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;background:{{r.dot}}"></span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+              <span style="text-wrap:pretty;line-height:1.4">{{r.title}}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#A9A49A">{{r.status}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+            <span style="font-weight:600;font-size:15px">Testes de integração</span>
+            <span style="font-size:12px;color:var(--muted,#6B675E)">Testcontainers · {{testsSummary}}</span>
+          </div>
+          <button onClick="{{runSuite}}" style="border:0;background:var(--btn,#1B1B18);color:var(--btnfg,#F3F1EC);cursor:pointer;font:inherit;font-size:12.5px;padding:7px 12px;border-radius:6px">{{runLabel}}</button>
+        </div>
+        <sc-for list="{{tests}}" as="t" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line2,#EEEBE4)">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px">{{t.name}}</span>
+              <span style="font-size:12px;color:var(--muted,#6B675E)">{{t.desc}}</span>
+            </div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:{{t.bg}};color:{{t.fg}}">{{t.status}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isUpload}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">POST /api/v1/documentos</div>
+    <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Upload de documentos</h1>
+    <p style="margin:0;color:var(--muted,#6B675E);max-width:640px;text-wrap:pretty">A API calcula o SHA-256 do arquivo como chave de idempotência, grava o documento e publica o evento no broker. Reenviar o mesmo arquivo não cria um novo processamento.</p>
+  </div>
+  <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:150px;border:1.5px dashed var(--line3,#C9C3B6);border-radius:12px;background:var(--panel,#FFFFFF);cursor:pointer">
+    <input type="file" multiple="multiple" accept="image/*,application/pdf" onChange="{{onFiles}}" style="display:none">
+    <span style="font-weight:600;font-size:15px">Solte fotos ou PDFs de notas fiscais e recibos</span>
+    <span style="font-size:13px;color:var(--muted,#6B675E)">ou clique para escolher · JPG, PNG, PDF</span>
+  </label>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-weight:600;font-size:15px;margin-right:auto">Documentos de exemplo</span>
+    <button onClick="{{sendDuplicate}}" style="border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font:inherit;font-size:13px;padding:7px 12px;border-radius:6px;color:var(--ink,#1B1B18)">Testar idempotência</button>
+    <button onClick="{{sendAll}}" style="border:0;background:#E2572B;color:#FFFFFF;cursor:pointer;font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px">Enviar todos</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">
+    <sc-for list="{{samples}}" as="s" hint-placeholder-count="6">
+      <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg,#F3F1EC);padding:2px 7px;border-radius:4px">{{s.kind}}</span>
+          <span style="font-size:12px;color:{{s.cenColor}};margin-left:auto">{{s.cen}}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-weight:600">{{s.emitente}}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted,#6B675E)">{{s.file}}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px">{{s.totalFmt}}</span>
+          <button onClick="{{s.send}}" style="border:1px solid var(--ink,#1B1B18);background:transparent;cursor:pointer;font:inherit;font-size:12.5px;padding:5px 12px;border-radius:6px;color:var(--ink,#1B1B18)">Enviar</button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:6px 18px">
+    <sc-if value="{{noUploads}}" hint-placeholder-val="{{ false }}"><div style="padding:14px 0;color:var(--muted,#6B675E);font-size:13px">Nenhum envio nesta sessão.</div></sc-if>
+    <sc-for list="{{uploads}}" as="u" hint-placeholder-count="3">
+      <div style="display:grid;grid-template-columns:80px minmax(0,1fr) 180px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line2,#EEEBE4);font-size:13px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted,#6B675E)">{{u.time}}</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis">{{u.file}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E)">{{u.detail}}</span></div>
+        <span style="color:{{u.color}};font-weight:500;text-align:right">{{u.result}}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPipe}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:300px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">AO VIVO · {{brokerLabel}}</div>
+      <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Pipeline de extração</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:8px;padding:6px 6px 6px 12px">
+      <span style="width:8px;height:8px;border-radius:50%;background:{{simDot}}"></span>
+      <span style="font-size:13px">Simulador de mensageria</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted,#6B675E)">{{simStatus}}</span>
+      <button onClick="{{toggleSim}}" style="border:0;background:var(--btn,#1B1B18);color:var(--btnfg,#F3F1EC);cursor:pointer;font:inherit;font-size:12.5px;padding:6px 11px;border-radius:5px">{{simBtn}}</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line,#E2DED5);border:1px solid var(--line,#E2DED5);border-radius:10px;overflow:hidden">
+    <sc-for list="{{metrics}}" as="m" hint-placeholder-count="5">
+      <div style="background:var(--panel,#FFFFFF);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0">
+        <span style="font-size:12px;color:var(--muted,#6B675E);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.label}}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:clamp(16px,1.8vw,22px);font-weight:500;color:{{m.color}}">{{m.value}}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:stretch">
+    <sc-for list="{{nodes}}" as="nd" hint-placeholder-count="4">
+      <div style="background:var(--panel,#FFFFFF);border:1.5px solid {{nd.border}};border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:170px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:2px;background:{{nd.color}}"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E)">{{nd.step}}</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{nd.title}}</span><span style="font-size:12px;color:var(--muted,#6B675E);text-wrap:pretty">{{nd.sub}}</span></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;margin-top:auto">{{nd.count}}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;min-height:20px">
+          <sc-for list="{{nd.chips}}" as="c" hint-placeholder-count="0">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:4px;background:{{c.bg}};color:{{c.fg}}">{{c.label}}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-for list="{{outcomes}}" as="o" hint-placeholder-count="3">
+        <button onClick="{{o.go}}" style="flex:1;display:flex;align-items:center;gap:10px;background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-left:0;border-radius:10px;padding:10px 14px;cursor:pointer;font:inherit;color:var(--ink,#1B1B18);text-align:left;box-shadow:inset 3px 0 0 {{o.color}}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:13.5px">{{o.title}}</span><span style="font-size:11.5px;color:var(--muted,#6B675E)">{{o.sub}}</span></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:20px;color:{{o.color}}">{{o.count}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;align-items:start">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:14px 18px 6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px"><span style="font-weight:600;font-size:15px">Documentos</span><span style="font-size:12px;color:var(--muted,#6B675E)">clique para abrir o trace</span></div>
+      <sc-for list="{{docRows}}" as="d" hint-placeholder-count="6">
+        <div onClick="{{d.open}}" style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,120px) 70px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line2,#EEEBE4);cursor:pointer;font-size:13px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{d.code}}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2,#3A3832)">{{d.file}}</span>
+          <span style="color:{{d.color}};font-size:12.5px">{{d.stage}}</span>
+          <div style="height:4px;background:var(--line2,#EEEBE4);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{d.pct}};background:{{d.color}}"></div></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:14px 18px;display:flex;flex-direction:column;gap:4px">
+        <span style="font-weight:600;font-size:15px">{{brokerLabel}}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted,#6B675E);padding-bottom:6px">{{brokerGroup}}</span>
+        <sc-for list="{{queues}}" as="q" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line2,#EEEBE4)">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;flex:1">{{q.name}}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{q.color}}">{{q.depth}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#1B1B18;color:#E8E4DA;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2572B;letter-spacing:.08em">ÚLTIMO ENVELOPE</span>
+        <pre style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all">{{envelope}}</pre>
+      </div>
+    </div>
+  </div>
+  <sc-if value="{{isSidebar}}" hint-placeholder-val="{{ true }}">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:14px 18px;display:flex;flex-direction:column;gap:6px">
+      <span style="font-weight:600;font-size:15px;padding-bottom:4px">Eventos</span>
+      <sc-for list="{{eventsShort}}" as="e" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:70px 90px 76px minmax(0,1fr);gap:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:3px 0">
+          <span style="color:var(--muted,#6B675E)">{{e.time}}</span><span style="color:{{e.color}}">{{e.svc}}</span><span>{{e.doc}}</span><span style="color:{{e.msgColor}};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{e.msg}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isReview}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px;height:100%">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">LIMIAR DE CONFIANÇA {{thresholdFmt}}</div>
+    <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Fila de revisão</h1>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px;align-items:start">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;overflow:hidden">
+      <sc-if value="{{noReview}}" hint-placeholder-val="{{ false }}"><div style="padding:18px;color:var(--muted,#6B675E);font-size:13px">Nenhum documento aguardando revisão.</div></sc-if>
+      <sc-for list="{{reviewList}}" as="r" hint-placeholder-count="4">
+        <div onClick="{{r.pick}}" style="display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-bottom:1px solid var(--line2,#EEEBE4);cursor:pointer;background:{{r.bg}};opacity:{{r.opacity}};box-shadow:{{r.mark}}">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{r.code}}</span><span style="font-size:11.5px;color:var(--muted,#6B675E)">{{r.kind}}</span><span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:{{r.confColor}}">{{r.conf}}</span></div>
+          <span style="font-weight:500;font-size:13.5px">{{r.emitente}}</span>
+          <span style="font-size:12px;color:{{r.reasonColor}};text-wrap:pretty">{{r.reason}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:220px">
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{sel.code}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg,#F3F1EC);padding:2px 7px;border-radius:4px">{{sel.kind}}</span><span style="font-size:12px;color:{{sel.statusColor}}">{{sel.status}}</span></div>
+          <span style="font-weight:600;font-size:19px">{{sel.emitente}}</span>
+          <span style="font-size:13px;color:var(--err,#C0392B);text-wrap:pretty">{{sel.reason}}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+          <span style="font-size:12px;color:var(--muted,#6B675E)">Confiança</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:500;color:{{sel.confColor}}">{{sel.conf}}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:8px;flex:0 1 170px;min-width:140px">
+          <div style="height:220px;border-radius:8px;border:1px solid var(--line,#E2DED5);background:repeating-linear-gradient(135deg,#F3F1EC 0 8px,var(--stripe,#ECE8E0) 8px 16px);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted,#6B675E);background:var(--panel,#FFFFFF);padding:3px 6px;border-radius:3px;word-break:break-all">{{sel.file}}</span>
+          </div>
+          <button onClick="{{sel.openTrace}}" style="border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:7px;border-radius:6px;color:var(--ink,#1B1B18)">trace {{sel.traceShort}}</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:min(100%,300px);flex:1 1 300px">
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{sel.fields}}" as="f" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:72px minmax(150px,1fr) minmax(56px,90px);gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2,#EEEBE4)">
+                <span style="font-size:12.5px;color:var(--muted,#6B675E)">{{f.label}}</span>
+                <input value="{{f.value}}" onChange="{{f.onChange}}" readOnly="{{f.ro}}" style="font-family:'JetBrains Mono',monospace;font-size:13px;border:1px solid {{f.border}};background:{{f.bg}};border-radius:5px;padding:6px 8px;color:var(--ink,#1B1B18);min-width:0;outline:none">
+                <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:4px;background:var(--line2,#EEEBE4);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{f.pct}};background:{{f.color}}"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;width:32px;text-align:right;color:{{f.color}}">{{f.pct}}</span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px">
+            <sc-for list="{{sel.validations}}" as="v" hint-placeholder-count="4">
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:8px;background:{{v.bg}}">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:{{v.color}};font-weight:600">{{v.icon}}</span>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:13px;font-weight:500">{{v.name}}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E)">{{v.detail}}</span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;font-size:13px">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 70px 80px;gap:8px;padding:6px 0;color:var(--muted,#6B675E);font-size:12px;border-bottom:1px solid var(--line,#E2DED5)"><span>Item</span><span style="text-align:right">Qtd</span><span style="text-align:right">Unit.</span><span style="text-align:right">Subtotal</span></div>
+            <sc-for list="{{sel.items}}" as="it" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 70px 80px;gap:8px;padding:6px 0;border-bottom:1px solid var(--line2,#EEEBE4);font-family:'JetBrains Mono',monospace;font-size:12px"><span style="font-family:'Instrument Sans',sans-serif;font-size:13px">{{it.desc}}</span><span style="text-align:right">{{it.qty}}</span><span style="text-align:right">{{it.unit}}</span><span style="text-align:right">{{it.sub}}</span></div>
+            </sc-for>
+            <div style="display:flex;justify-content:flex-end;gap:16px;padding:8px 0;font-family:'JetBrains Mono',monospace;font-size:12.5px"><span style="color:var(--muted,#6B675E)">soma dos itens</span><span>{{sel.sum}}</span></div>
+          </div>
+          <sc-if value="{{sel.pending}}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onClick="{{sel.reject}}" style="border:1px solid var(--line,#E2DED5);background:var(--panel,#FFFFFF);cursor:pointer;font:inherit;font-size:13.5px;padding:9px 16px;border-radius:6px;color:var(--err,#C0392B)">Rejeitar</button>
+            <button onClick="{{sel.approve}}" style="border:0;background:var(--btn,#1B1B18);cursor:pointer;font:inherit;font-size:13.5px;font-weight:500;padding:9px 18px;border-radius:6px;color:var(--btnfg,#FFFFFF)">Aprovar e publicar</button>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isTrace}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">OPENTELEMETRY · W3C TRACEPARENT</div>
+    <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Trace ponta a ponta</h1>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px;align-items:start">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;overflow:hidden">
+      <sc-for list="{{traceList}}" as="t" hint-placeholder-count="8">
+        <div onClick="{{t.pick}}" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line2,#EEEBE4);cursor:pointer;background:{{t.bg}};box-shadow:{{t.mark}}">
+          <span style="width:7px;height:7px;border-radius:50%;background:{{t.color}};flex-shrink:0"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{t.code}}</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E)">{{t.dur}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{hasTrace}}" hint-placeholder-val="{{ true }}">
+    <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:240px">
+          <span style="font-weight:600;font-size:16px">{{tr.code}} · {{tr.file}}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted,#6B675E)">trace_id {{tr.traceId}}</span>
+        </div>
+        <div style="display:flex;gap:18px">
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11.5px;color:var(--muted,#6B675E)">Duração</span><span style="font-family:'JetBrains Mono',monospace">{{tr.dur}}</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11.5px;color:var(--muted,#6B675E)">Spans</span><span style="font-family:'JetBrains Mono',monospace">{{tr.spanCount}}</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11.5px;color:var(--muted,#6B675E)">Resultado</span><span style="color:{{tr.color}}">{{tr.status}}</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <sc-for list="{{legend}}" as="l" hint-placeholder-count="4">
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2,#3A3832)"><span style="width:10px;height:10px;border-radius:2px;background:{{l.color}}"></span>{{l.label}}</span>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:84px minmax(0,150px) minmax(0,1fr) 48px;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted,#6B675E);border-bottom:1px solid var(--line,#E2DED5);padding-bottom:6px">
+        <span>serviço</span><span>span</span>
+        <div style="display:flex;justify-content:space-between;gap:6px;overflow:hidden;white-space:nowrap"><sc-for list="{{tr.ticks}}" as="tk" hint-placeholder-count="5"><span>{{tk}}</span></sc-for></div>
+        <span style="text-align:right">dur.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <sc-for list="{{tr.spans}}" as="s" hint-placeholder-count="10">
+          <div style="display:grid;grid-template-columns:84px minmax(0,150px) minmax(0,1fr) 48px;gap:10px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:3px 0">
+            <span style="color:{{s.color}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.svc}}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:{{s.textColor}}">{{s.name}}</span>
+            <div style="position:relative;height:14px;background:var(--track,#F6F4EF);border-radius:2px">
+              <div style="position:absolute;top:2px;bottom:2px;left:{{s.left}};width:{{s.width}};background:{{s.barColor}};border-radius:2px;opacity:{{s.opacity}}"></div>
+            </div>
+            <span style="text-align:right;color:var(--muted,#6B675E)">{{s.dur}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isDlq}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted,#6B675E);letter-spacing:.08em">{{dlqName}}</div>
+    <h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Retries e dead-letter queue</h1>
+  </div>
+  <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:12px">
+      <sc-for list="{{policy}}" as="p" hint-placeholder-count="7">
+        <span style="padding:6px 10px;border-radius:5px;background:{{p.bg}};color:{{p.fg}}">{{p.label}}</span>
+      </sc-for>
+    </div>
+    <p style="margin:0;color:var(--ink2,#3A3832);max-width:820px;text-wrap:pretty;line-height:1.5">{{retryHow}}</p>
+  </div>
+  <div style="background:var(--panel,#FFFFFF);border:1px solid var(--line,#E2DED5);border-radius:10px;padding:8px 20px">
+    <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) 70px 110px;gap:12px;padding:8px 0;font-size:12px;color:var(--muted,#6B675E);border-bottom:1px solid var(--line,#E2DED5)"><span>Documento</span><span>Arquivo</span><span>Último erro</span><span>Tentativas</span><span></span></div>
+    <sc-if value="{{noDlq}}" hint-placeholder-val="{{ false }}"><div style="padding:16px 0;color:var(--muted,#6B675E);font-size:13px">Nenhuma mensagem na DLQ. Aumente a taxa de falha nos Tweaks para forçar retries.</div></sc-if>
+    <sc-for list="{{dlqRows}}" as="d" hint-placeholder-count="2">
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) 70px 110px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line2,#EEEBE4);font-size:13px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{d.code}}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{d.file}}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--err,#C0392B)">{{d.err}}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px">{{d.attempts}}</span>
+        <button onClick="{{d.retry}}" style="border:1px solid var(--ink,#1B1B18);background:transparent;cursor:pointer;font:inherit;font-size:12.5px;padding:5px 10px;border-radius:6px;color:var(--ink,#1B1B18)">Reprocessar</button>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{isTop}}" hint-placeholder-val="{{ false }}">
+<aside style="width:min(300px,28vw);flex-shrink:0;border-left:1px solid var(--line,#E2DED5);background:#1B1B18;color:#E8E4DA;display:flex;flex-direction:column;min-height:0">
+  <div style="padding:16px 18px 10px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #34332E">
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:{{liveDot}}"></span><span style="font-weight:600">Eventos ao vivo</span><span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8C877D">{{brokerLabel}}</span></div>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8C877D">{{simStatus}}</span>
+  </div>
+  <div style="flex:1;overflow:auto;padding:8px 18px;display:flex;flex-direction:column">
+    <sc-for list="{{events}}" as="e" hint-placeholder-count="12">
+      <div style="display:flex;flex-direction:column;gap:2px;padding:7px 0;border-bottom:1px solid #2A2925;font-family:'JetBrains Mono',monospace;font-size:11px">
+        <div style="display:flex;gap:8px"><span style="color:#8C877D">{{e.time}}</span><span style="color:{{e.colorDark}}">{{e.svc}}</span><span style="margin-left:auto">{{e.doc}}</span></div>
+        <span style="color:{{e.msgColorDark}};line-height:1.4">{{e.msg}}</span>
+      </div>
+    </sc-for>
+  </div>
+</aside>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sidebar&quot;,&quot;topbar&quot;],&quot;default&quot;:&quot;sidebar&quot;,&quot;tsType&quot;:&quot;'sidebar'|'topbar'&quot;},&quot;threshold&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.5,&quot;max&quot;:0.99,&quot;step&quot;:0.01,&quot;default&quot;:0.85,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;failureRate&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.05,&quot;default&quot;:0.25,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;}}">
+const INK='var(--ink,#1B1B18)',MUTED='var(--muted,#6B675E)',ACC='#E2572B',OK='var(--ok,#2E7D4F)',WARN='var(--warn,#B7791F)',ERR='var(--err,#C0392B)';
+const SVC={api:{label:'api · java',color:'var(--c-api,#3F7D3A)',dark:'#8FC27F'},broker:{label:'broker',color:'var(--c-broker,#9A6B1F)',dark:'#E0B060'},worker:{label:'worker · py',color:'var(--c-worker,#2F5DA8)',dark:'#86A9E6'},db:{label:'postgres',color:'var(--c-db,#6B4FA0)',dark:'#B9A2E3'}};
+const BROKERS={
+ kafka:{label:'Kafka',in:'documentos.recebidos',out:'documentos.extraidos',retry:'documentos.recebidos-retry',dlq:'documentos.recebidos.DLT',group:'consumer group extrator-py · 3 partições',kin:'tópico',
+  how:'Retry topics não bloqueantes (@RetryableTopic no Spring, retry topic no consumer Python) com backoff exponencial. Após a 3ª falha a mensagem vai para o DLT com os headers da exceção e o traceparent original, e pode ser reprocessada pela API.'},
+ rabbit:{label:'RabbitMQ',in:'extracao.q',out:'validacao.q',retry:'extracao.retry (TTL)',dlq:'extracao.dlq',group:'exchange documentos · prefetch 10',kin:'fila',
+  how:'Fila de espera com TTL por tentativa e dead-letter-exchange apontando de volta para extracao.q. O header x-death conta as tentativas; após a 3ª falha a mensagem é roteada para extracao.dlq e pode ser reprocessada pela API.'}};
+const W1=[5,4,3,2,9,8,7,6,5,4,3,2],W2=[6,5,4,3,2,9,8,7,6,5,4,3,2];
+const dv=(a,w)=>{const s=a.reduce((x,d,i)=>x+d*w[i],0)%11;return s<2?0:11-s;};
+const cnpjDv=b=>{const d1=dv(b,W1);return [d1,dv([...b,d1],W2)];};
+const fmtCnpj=s=>`${s.slice(0,2)}.${s.slice(2,5)}.${s.slice(5,8)}/${s.slice(8,12)}-${s.slice(12)}`;
+const checkCnpj=str=>{const d=String(str).replace(/\D/g,'').split('').map(Number);if(d.length!==14)return{ok:false,msg:`${d.length} dígitos, esperado 14`};const [a,b]=cnpjDv(d.slice(0,12));const ok=a===d[12]&&b===d[13];return{ok,msg:ok?`DV ${a}${b} confere`:`DV calculado ${a}${b}, lido ${d[12]}${d[13]}`};};
+const r2=v=>Math.round(v*100)/100;
+const brl=v=>'R$ '+v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const numStr=v=>v.toFixed(2).replace('.',',');
+const parseMoney=s=>{const n=parseFloat(String(s).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.'));return isNaN(n)?0:n;};
+const rnd=(a,b)=>Math.round(a+Math.random()*(b-a));
+const clip=v=>Math.max(.3,Math.min(.995,v));
+const pct=v=>Math.round(v*100)+'%';
+const hex=n=>Array.from({length:n},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+const fnv=s=>{let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h.toString(16).padStart(8,'0');};
+const now=()=>{const d=new Date();return d.toTimeString().slice(0,8);};
+const fmtDate=s=>s.split('-').reverse().join('/');
+const ms=v=>v>=1000?(v/1000).toFixed(1).replace('.',',')+'s':Math.round(v)+'ms';
+const RAW=[
+ {key:'s1',file:'nfe_mercado_sao_jorge.pdf',kind:'NF-e',emitente:'Mercado São Jorge Ltda',base:'112223330001',data:'2026-10-02',itens:[['Arroz tipo 1 5kg',2,27.9],['Feijão carioca 1kg',3,8.49],['Óleo de soja 900ml',2,7.35]],conf:.95,cen:'Deve aprovar'},
+ {key:'s2',file:'recibo_posto_foto.jpg',kind:'Recibo',emitente:'Auto Posto Via Norte',base:'045432180001',data:'2026-10-07',itens:[['Gasolina comum (L)',38.2,6.19]],conf:.74,cen:'Foto com baixa confiança'},
+ {key:'s3',file:'nfce_farmacia_central.pdf',kind:'NFC-e',emitente:'Farmácia Central EIRELI',base:'273650410001',data:'2026-10-09',itens:[['Dipirona 500mg',1,12.9],['Protetor solar FPS50',1,64.9]],conf:.93,badCnpj:true,cen:'CNPJ com DV inválido'},
+ {key:'s4',file:'nfe_papelaria_lote.pdf',kind:'NF-e',emitente:'Papelaria Ponto Final',base:'607011900001',data:'2026-09-28',itens:[['Resma A4 75g',5,29.9],['Caneta gel (cx 12)',2,38.5],['Pasta catálogo',4,11.2]],conf:.92,offset:12.5,cen:'Soma dos itens ≠ total'},
+ {key:'s5',file:'cupom_restaurante.jpg',kind:'Cupom',emitente:'Restaurante Dona Lia',base:'334419520001',data:'2026-10-11',itens:[['Prato executivo',2,42],['Suco natural',2,11.5]],conf:.91,cen:'Deve aprovar'},
+ {key:'s6',file:'nfse_consultoria_ti.pdf',kind:'NFS-e',emitente:'Kodo Consultoria em TI',base:'091238770001',data:'2026-10-01',itens:[['Consultoria arquitetura (h)',16,220]],conf:.96,cen:'Deve aprovar'}];
+const SAMPLES=RAW.map(s=>{const b=s.base.split('').map(Number);const d=cnpjDv(b);if(s.badCnpj)d[1]=(d[1]+1)%10;const sum=r2(s.itens.reduce((a,[,q,u])=>a+q*u,0));return{...s,cnpj:fmtCnpj(s.base+d.join('')),sum,total:r2(sum+(s.offset||0))};});
+const ERRS=['LLM 503 Service Unavailable','timeout 30s no provedor LLM','429 rate limit excedido'];
+const PHASES=[
+ ['F1','Fundação',[['docker-compose com Postgres, Kafka, RabbitMQ, MinIO e Jaeger','base'],['Spring Boot: POST /api/v1/documentos com upload para MinIO','base'],['Schema Postgres + migrações Flyway','base'],['Idempotency key = SHA-256 do arquivo com UNIQUE constraint','eventos']]],
+ ['F2','Worker Python',[['Consumer com ack manual (aiokafka / aio-pika)','eventos'],['OCR com PaddleOCR + pré-processamento de imagem','base'],['Extração via LLM com saída em JSON Schema','base'],['Publicar documento.extraido com confiança por campo','score']]],
+ ['F3','Confiabilidade',[['Retry com backoff exponencial 1s · 2s · 4s','eventos'],['Dead-letter queue + endpoint de reprocessamento','eventos'],['Transactional outbox no Spring Boot','eventos'],['Abstração de broker: Kafka e RabbitMQ intercambiáveis','simulador']]],
+ ['F4','Validação e decisão',[['Dígito verificador do CNPJ','validacao'],['Soma dos itens igual ao total (tolerância R$ 0,01)','validacao'],['Score de confiança ponderado + limiar configurável','score'],['Fila de revisão humana (status EM_REVISAO)','score']]],
+ ['F5','Revisão e observabilidade',[['Tela de revisão React/TS com edição de campos','score'],['OpenTelemetry Java agent na API','otel'],['OTel SDK Python + propagação do traceparent nos headers','otel'],['Dashboards Jaeger/Grafana por documento','otel']]],
+ ['F6','Testes e integração',[['Testcontainers: PostgreSQL + Kafka nos ITs Java','testes'],['testcontainers-python no worker','testes'],['Teste de propagação de trace Java → Python','testes'],['Espelhar eventos no simulador de mensageria','simulador'],['README com diagrama e demo gravada','base']]]];
+const REQS=[['eventos','A arquitetura é orientada a eventos, com idempotência, retry com backoff e dead-letter queue.'],['validacao','Os dados extraídos passam por validações determinísticas, como dígito verificador do CNPJ e soma dos itens igual ao total.'],['score','Um score de confiança decide se o documento é aprovado automaticamente ou vai para a fila de revisão.'],['otel','Há observabilidade com OpenTelemetry, rastreando um documento de ponta a ponta entre os serviços.'],['testes','Os testes de integração usam Testcontainers.'],['simulador','Diferencial: conversa diretamente com o seu simulador de mensageria.']];
+const TESTS=[['DocumentoUploadIT','Java · PostgreSQLContainer + KafkaContainer'],['IdempotenciaIT','Java · mesmo hash não cria novo documento'],['RetryBackoffIT','Java · 3 falhas levam a mensagem ao DLT'],['CnpjValidatorTest','Java · unitário, casos válidos e inválidos'],['SomaItensValidatorTest','Java · unitário, tolerância de centavos'],['test_worker_extracao.py','Python · testcontainers KafkaContainer'],['TracePropagationIT','Java + Python · traceparent preservado']];
+const LS='pipefiscal.tasks.v1';
+
+const THEMES={
+ light:{bg:'#F3F1EC',panel:'#FFFFFF',line:'#E2DED5',line2:'#EEEBE4',line3:'#C9C3B6',ink:'#1B1B18',ink2:'#3A3832',muted:'#6B675E',track:'#F6F4EF',soft:'#FBF9F5',stripe:'#ECE8E0',warnbg:'#FBEBD8',okbg:'#E3F1E8',errbg:'#FBECEA',ok:'#2E7D4F',warn:'#B7791F',err:'#C0392B','c-api':'#3F7D3A','c-broker':'#9A6B1F','c-worker':'#2F5DA8','c-db':'#6B4FA0',waitbar:'#E8D3AE',btn:'#1B1B18',btnfg:'#F3F1EC'},
+ dark:{bg:'#121210',panel:'#1C1B18',line:'#2E2C28',line2:'#262522',line3:'#4A4740',ink:'#ECE8DF',ink2:'#C9C4B9',muted:'#9A958A',track:'#25241F',soft:'#24231F',stripe:'#1F1E1B',warnbg:'rgba(224,176,96,.15)',okbg:'rgba(111,191,138,.14)',errbg:'rgba(240,138,126,.14)',ok:'#6FBF8A',warn:'#E0B060',err:'#F08A7E','c-api':'#8FC27F','c-broker':'#E0B060','c-worker':'#86A9E6','c-db':'#B9A2E3',waitbar:'#5A4A2C',btn:'#ECE8DF',btnfg:'#1B1B18'}};
+class Component extends DCLogic {
+  state={theme:(()=>{try{return localStorage.getItem('pipefiscal.theme')||'light';}catch(e){return 'light';}})(),screen:'pipe',broker:'kafka',paused:false,speed:1,auto:true,simOn:true,selReview:null,selTrace:null,
+    tasks:(()=>{try{return JSON.parse(localStorage.getItem(LS))||{'F1.0':1,'F1.1':1,'F1.2':1};}catch(e){return{};}})(),
+    tests:TESTS.map(()=>({s:'idle'})),running:false};
+  docs=[];events=[];uploads=[];seen=new Set();seq=0;mirrored=0;lastEnv=null;
+  rootRef=React.createRef();
+  applyTheme(){const el=this.rootRef.current;if(!el)return;const v=THEMES[this.state.theme];for(const k in v)el.style.setProperty('--'+k,v[k]);}
+  componentDidUpdate(){this.applyTheme();}
+  componentDidMount(){this.applyTheme();
+    SAMPLES.forEach((s,i)=>this.createDoc(s,s.file,s.key,true));
+    this.docs.forEach((d,i)=>this.advance(d,(i+1)*1700));
+    this.timer=setInterval(()=>this.tick(),200);
+  }
+  componentWillUnmount(){clearInterval(this.timer);clearTimeout(this.testT);}
+  th(){return this.props.threshold??.85;}
+  B(){return BROKERS[this.state.broker];}
+  buildPlan(fail,err){
+    const B=this.B(),sp=[];let t=0;
+    const add=(svc,node,name,dur,stage,status='ok')=>{sp.push({svc,node,name,start:t,dur,stage,status});t+=dur;};
+    add('api','api','POST /api/v1/documentos',rnd(90,160),'Recebido');
+    add('db','api','INSERT documento ON CONFLICT (idempotency_key)',rnd(15,35),'Recebido');
+    add('broker','broker',`publish ${B.in}`,rnd(10,25),'Na fila');
+    let dlq=false;
+    for(let a=0;;a++){
+      add('worker','worker',`consume ${B.in}${a?` · tentativa ${a+1}`:''}`,rnd(10,20),'OCR');
+      add('worker','worker','ocr.paddleocr',rnd(700,1300),'OCR');
+      if(a<fail){
+        add('worker','worker',`llm.extract → ${err}`,rnd(600,1100),'Extração','error');
+        if(a<3){const b=1000*2**a;add('broker','retry',`retry +${b/1000}s → ${B.retry}`,b,`Retry ${a+1}/3`,'wait');}
+        else{add('broker','retry',`publish ${B.dlq}`,rnd(10,20),'DLQ','error');dlq=true;break;}
+      } else {add('worker','worker','llm.extract (json schema)',rnd(900,1700),'Extração');break;}
+    }
+    if(!dlq){
+      add('broker','broker',`publish ${B.out}`,rnd(10,20),'Validação');
+      add('api','valid',`consume ${B.out}`,rnd(10,20),'Validação');
+      add('api','valid','validate cnpj.dv + soma.itens',rnd(40,90),'Validação');
+      add('api','valid','score.confianca',rnd(10,20),'Score');
+      add('db','valid','UPDATE documento SET status',rnd(15,30),'Score');
+    }
+    return{spans:sp,end:t,dlq};
+  }
+  createDoc(s,file,key,silent){
+    const hash=fnv(key);
+    if(this.seen.has(hash)){
+      this.uploads.unshift({time:now(),file,result:'Duplicado ignorado',color:WARN,detail:`idempotency_key sha256:${hash}… já existe`});
+      this.pushEvent({svc:'api',doc:'—',msg:`409 duplicado · sha256:${hash} já processado`,level:'warn'});
+      this.forceUpdate();return;
+    }
+    this.seen.add(hash);
+    const fr=this.props.failureRate??.25;
+    const fail=Math.random()<fr?(Math.random()<.35?4:1+Math.floor(Math.random()*3)):0;
+    const err=ERRS[Math.floor(Math.random()*ERRS.length)];
+    const plan=this.buildPlan(fail,err);
+    const j=()=>Math.random()*.07-.04;
+    const uid=++this.seq;
+    const d={uid,code:'DOC-'+(1000+uid),s,file,hash,traceId:hex(32),t:0,spans:plan.spans,end:plan.end,willDlq:plan.dlq,fail,err,attempts:Math.min(fail,3)+1,
+      fc:{cnpj:clip(s.conf+j()),emitente:clip(s.conf+j()+.02),data:clip(s.conf+j()+.03),total:clip(s.conf+j()),itens:clip(s.conf+j()-.01)},
+      vals:{cnpj:s.cnpj,total:numStr(s.total)},outcome:null,reason:'',review:null,emitted:0};
+    this.docs.unshift(d);
+    if(this.docs.length>40)this.docs.pop();
+    this.uploads.unshift({time:now(),file,result:'Aceito · 202',color:OK,detail:`${d.code} · sha256:${hash}`});
+    if(this.uploads.length>8)this.uploads.pop();
+    this.advance(d,0);
+    if(!silent)this.forceUpdate();
+  }
+  validations(d){
+    const c=checkCnpj(d.vals.cnpj),tot=parseMoney(d.vals.total),ok2=Math.abs(d.s.sum-tot)<=.01;
+    return[{name:'Dígito verificador do CNPJ',ok:c.ok,detail:c.msg},{name:'Soma dos itens = total',ok:ok2,detail:`${brl(d.s.sum)} vs ${brl(tot)}`},
+      {name:'Data não futura',ok:d.s.data<='2026-10-13',detail:fmtDate(d.s.data)},{name:'Campos obrigatórios',ok:true,detail:'5 de 5 presentes'}];
+  }
+  conf(d){const f=d.fc;return f.cnpj*.25+f.total*.25+f.itens*.2+f.data*.15+f.emitente*.15;}
+  decide(d){
+    const bad=this.validations(d).filter(v=>!v.ok),c=this.conf(d);
+    if(bad.length)return{o:'review',reason:'Validação falhou: '+bad.map(v=>v.name).join(', ')};
+    if(c<this.th())return{o:'review',reason:`Confiança ${pct(c)} abaixo do limiar ${pct(this.th())}`};
+    return{o:'auto',reason:`Confiança ${pct(c)} e validações ok`};
+  }
+  pushEvent(e){
+    const c=SVC[e.svc];
+    this.events.unshift({...e,id:Math.random(),time:now(),svcLabel:c.label});
+    if(this.events.length>80)this.events.pop();
+    if(this.state.simOn)this.mirrored++;
+  }
+  advance(d,dt){
+    if(d.outcome)return;
+    d.t+=dt;
+    while(d.emitted<d.spans.length&&d.spans[d.emitted].start<=d.t){
+      const sp=d.spans[d.emitted++];
+      this.pushEvent({svc:sp.svc,doc:d.code,msg:sp.name,level:sp.status});
+      if(sp.name.startsWith('publish')||sp.name.startsWith('consume')||sp.name.startsWith('retry'))
+        this.lastEnv={eventType:sp.name.split(' ')[0]==='retry'?'documento.retry':sp.name.includes(this.B().out)?'documento.extraido':'documento.recebido',documentId:d.code,idempotencyKey:'sha256:'+d.hash,attempt:Math.min(d.spans.slice(0,d.emitted).filter(x=>x.name.startsWith('consume')&&x.svc==='worker').length,4)||1,traceparent:`00-${d.traceId}-${hex(16)}-01`,broker:this.B().label};
+    }
+    if(d.t>=d.end){
+      d.t=d.end;
+      if(d.willDlq){d.outcome='dlq';d.reason=d.err;this.pushEvent({svc:'broker',doc:d.code,msg:`DLQ após ${d.attempts} tentativas · ${d.err}`,level:'error'});}
+      else{const r=this.decide(d);d.outcome=r.o;d.reason=r.reason;this.pushEvent({svc:'api',doc:d.code,msg:r.o==='auto'?'documento.aprovado (automático)':'documento.em_revisao · '+r.reason,level:r.o==='auto'?'ok':'warn'});}
+    }
+  }
+  tick(){
+    if(this.state.paused)return;
+    const dt=200*this.state.speed;
+    this.docs.forEach(d=>this.advance(d,dt));
+    if(this.state.auto){this.autoAcc=(this.autoAcc||0)+dt;if(this.autoAcc>3200){this.autoAcc=0;const s=SAMPLES[Math.floor(Math.random()*SAMPLES.length)];const n=String(this.seq+1).padStart(4,'0');this.createDoc(s,s.file.replace(/(\.\w+)$/,`_${n}$1`),s.key+'-'+n,true);}}
+    this.forceUpdate();
+  }
+  reprocess(d){
+    const plan=this.buildPlan(0,d.err);
+    Object.assign(d,{t:0,spans:plan.spans,end:plan.end,willDlq:false,outcome:null,emitted:0,reprocessed:true});
+    this.pushEvent({svc:'api',doc:d.code,msg:`POST /documentos/${d.code}/reprocessar · mesma idempotency_key`,level:'ok'});
+    this.advance(d,0);this.forceUpdate();
+  }
+  toggleTask(k){const tasks={...this.state.tasks};if(tasks[k])delete tasks[k];else tasks[k]=1;try{localStorage.setItem(LS,JSON.stringify(tasks));}catch(e){}this.setState({tasks});}
+  runSuite(){
+    if(this.state.running)return;
+    this.setState({running:true,tests:TESTS.map(()=>({s:'queued'}))});
+    const step=i=>{
+      if(i>=TESTS.length){this.setState({running:false});return;}
+      this.setState(st=>{const t=[...st.tests];t[i]={s:'running'};return{tests:t};});
+      this.testT=setTimeout(()=>{this.setState(st=>{const t=[...st.tests];t[i]={s:'pass',dur:(Math.random()*3+.6).toFixed(1).replace('.',',')+'s'};return{tests:t};});step(i+1);},700);
+    };
+    step(0);
+  }
+  renderVals(){
+    const st=this.state,layout=this.props.layout??'sidebar',isSidebar=layout!=='topbar',B=this.B(),th=this.th();
+    const go=k=>()=>this.setState({screen:k});
+    const pending=this.docs.filter(d=>d.outcome==='review'&&!d.review);
+    const dlqDocs=this.docs.filter(d=>d.outcome==='dlq');
+    const mkNav=(k,label,badge)=>{const on=st.screen===k;return{k,label,badge:badge||'',go:go(k),bg:on?'#34332E':'transparent',fg:on?'#FFFFFF':'#C9C4B9',badgeFg:on?ACC:'#8C877D',fgLight:on?INK:MUTED,underline:on?`inset 0 -2px 0 ${ACC}`:'none'};};
+    const navPlan=[mkNav('plan','Plano e tarefas')];
+    const navProd=[mkNav('upload','Upload'),mkNav('pipe','Pipeline ao vivo'),mkNav('review','Revisão',pending.length||''),mkNav('trace','Traces'),mkNav('dlq','DLQ',dlqDocs.length||'')];
+    const brokerOpts=Object.keys(BROKERS).map(k=>{const on=st.broker===k;return{label:BROKERS[k].label,pick:()=>{this.setState({broker:k});this.pushEvent({svc:'api',doc:'—',msg:`broker alterado para ${BROKERS[k].label} · novos documentos usam ${BROKERS[k].in}`,level:'ok'});},bgDark:on?'#F3F1EC':'transparent',fgDark:on?'#1B1B18':'#C9C4B9',bgLight:on?'#FFFFFF':'transparent',fgLight:on?INK:MUTED};});
+    // plan
+    let planDone=0,planTotal=0;const reqCount={};
+    const phases=PHASES.map(([id,title,tasks])=>{let done=0;const ts=tasks.map(([t,tag],i)=>{const k=`${id}.${i}`,on=!!st.tasks[k];if(on)done++;reqCount[tag]=reqCount[tag]||[0,0];reqCount[tag][1]++;if(on)reqCount[tag][0]++;return{title:t,tag,toggle:()=>this.toggleTask(k),mark:on?'✓':'',box:on?OK:'var(--line3,#C9C3B6)',boxBg:on?OK:'var(--panel,#FFFFFF)',fg:on?MUTED:INK,deco:on?'line-through':'none'};});planDone+=done;planTotal+=ts.length;return{id,title,tasks:ts,done,total:ts.length,pct:pct(done/ts.length)};});
+    const reqs=REQS.map(([k,title])=>{const [a,b]=reqCount[k]||[0,0];return{title,status:a===b?`concluído · ${a}/${b} tarefas`:`${a}/${b} tarefas`,dot:a===b?'#6FBF8A':a>0?'#E0B060':'#55534C'};});
+    const TS={idle:['não executado','var(--bg,#F3F1EC)',MUTED],queued:['na fila','var(--bg,#F3F1EC)',MUTED],running:['rodando…','var(--warnbg,#FBEBD8)',WARN],pass:['passou','var(--okbg,#E3F1E8)',OK]};
+    const tests=TESTS.map(([name,desc],i)=>{const t=st.tests[i],m=TS[t.s];return{name,desc,status:t.s==='pass'?`passou ${t.dur}`:m[0],bg:m[1],fg:m[2]};});
+    const passN=st.tests.filter(t=>t.s==='pass').length;
+    // pipeline
+    const active=this.docs.filter(d=>!d.outcome);
+    const cur=d=>{let s=d.spans[0];for(const x of d.spans){if(x.start<=d.t)s=x;else break;}return s;};
+    const nodeOf=d=>cur(d).node;
+    const chip=d=>{const c=cur(d);const retry=c.node==='retry';return{label:d.code.slice(4)+(retry?' ↻':''),bg:retry?'var(--warnbg,#FBEBD8)':'var(--bg,#F3F1EC)',fg:retry?WARN:INK};};
+    const nd=(key,step,title,sub,color,keys)=>{const ds=active.filter(d=>keys.includes(nodeOf(d)));return{step,title,sub,color,count:ds.length,chips:ds.slice(0,8).map(chip),border:ds.length?color:'var(--line,#E2DED5)'};};
+    const nodes=[nd('api','01 · JAVA','API Spring Boot','upload, idempotência, outbox',SVC.api.color,['api']),
+      nd('broker','02 · '+B.label.toUpperCase(),B.label,`${B.in} · retry`,SVC.broker.color,['broker','retry']),
+      nd('worker','03 · PYTHON','Worker de extração','OCR + LLM com JSON Schema',SVC.worker.color,['worker']),
+      nd('valid','04 · JAVA','Validação e score','DV do CNPJ, soma dos itens, confiança',SVC.db.color,['valid'])];
+    const done=this.docs.filter(d=>d.outcome),auto=done.filter(d=>d.outcome==='auto'||d.review==='aprovado').length,nonDlq=done.filter(d=>d.outcome!=='dlq');
+    const autoOnly=done.filter(d=>d.outcome==='auto').length;
+    const lat=nonDlq.map(d=>d.end).sort((a,b)=>a-b),p50=lat.length?lat[Math.floor(lat.length/2)]:0;
+    const outcomes=[{title:'Aprovado automático',sub:`confiança ≥ ${pct(th)}`,count:autoOnly,color:OK,go:go('trace')},{title:'Revisão humana',sub:'validação ou confiança',count:pending.length,color:WARN,go:go('review')},{title:'Dead-letter',sub:'após 3 retries',count:dlqDocs.length,color:ERR,go:go('dlq')}];
+    const metrics=[{label:'Processados',value:String(done.length),color:INK},{label:'Aprovação automática',value:nonDlq.length?pct(autoOnly/nonDlq.length):'—',color:OK},{label:'Em revisão',value:String(pending.length),color:WARN},{label:'Na DLQ',value:String(dlqDocs.length),color:ERR},{label:'Latência p50',value:p50?ms(p50):'—',color:INK}];
+    const stageOf=d=>{if(d.outcome==='auto')return['Aprovado',OK];if(d.outcome==='dlq')return['DLQ',ERR];if(d.outcome==='review')return[d.review?(d.review==='aprovado'?'Aprovado (revisão)':'Rejeitado'):'Em revisão',d.review==='aprovado'?OK:d.review?MUTED:WARN];const c=cur(d);return[c.stage,c.node==='retry'?WARN:SVC[c.svc].color];};
+    const openTrace=d=>()=>this.setState({screen:'trace',selTrace:d.uid});
+    const docRows=this.docs.slice(0,isSidebar?8:12).map(d=>{const [stage,color]=stageOf(d);return{code:d.code,file:d.file,stage,color,pct:pct(d.t/d.end),open:openTrace(d)};});
+    const inQ=active.filter(d=>cur(d).node==='broker'&&cur(d).stage==='Na fila').length,retQ=active.filter(d=>cur(d).node==='retry').length,outQ=active.filter(d=>cur(d).stage==='Validação'&&cur(d).svc==='broker').length;
+    const queues=[{name:B.in,depth:inQ,color:INK},{name:B.retry,depth:retQ,color:retQ?WARN:INK},{name:B.out,depth:outQ,color:INK},{name:B.dlq,depth:dlqDocs.length,color:dlqDocs.length?ERR:INK}];
+    const envelope=this.lastEnv?JSON.stringify(this.lastEnv,null,2):'aguardando eventos…';
+    const evMap=e=>{const c=SVC[e.svc];const lv=e.level==='error'?[ERR,'#F08A7E']:e.level==='warn'||e.level==='wait'?[WARN,'#E0B060']:[INK,'#E8E4DA'];return{time:e.time,svc:c.label,color:c.color,colorDark:c.dark,doc:e.doc,msg:e.msg,msgColor:lv[0],msgColorDark:lv[1]};};
+    // review
+    const reviewDocs=[...pending,...this.docs.filter(d=>d.outcome==='review'&&d.review)];
+    let selDoc=reviewDocs.find(d=>d.uid===st.selReview)||pending[0]||reviewDocs[0];
+    const confColor=c=>c>=th?OK:c>=th-.1?WARN:ERR;
+    const reviewList=reviewDocs.map(d=>{const on=selDoc&&d.uid===selDoc.uid,c=this.conf(d);return{code:d.code,kind:d.s.kind,emitente:d.s.emitente,conf:pct(c),confColor:confColor(c),reason:d.review?(d.review==='aprovado'?'Aprovado na revisão':'Rejeitado na revisão'):d.reason,reasonColor:d.review?MUTED:'var(--ink2,#3A3832)',pick:()=>this.setState({selReview:d.uid}),bg:on?'var(--soft,#FBF9F5)':'var(--panel,#FFFFFF)',mark:on?`inset 3px 0 0 ${ACC}`:'none',opacity:d.review?.6:1};});
+    let sel=null;
+    if(selDoc){
+      const d=selDoc,c=this.conf(d),vs=this.validations(d),ed=!d.review;
+      const setVal=k=>e=>{d.vals[k]=e.target.value;d.fc[k]=Math.max(d.fc[k],.99);this.forceUpdate();};
+      const F=(k,label,value,editable)=>({label,value,onChange:editable?setVal(k):()=>{},ro:!editable||!ed,border:editable&&ed?'var(--line3,#C9C3B6)':'transparent',bg:editable&&ed?'#FFFFFF':'var(--track,#F6F4EF)',pct:pct(d.fc[k]),color:confColor(d.fc[k])});
+      const failed=vs.filter(v=>!v.ok);
+      sel={code:d.code,kind:d.s.kind,file:d.file,emitente:d.s.emitente,conf:pct(c),confColor:confColor(c),
+        reason:failed.length?'Validação falhou: '+failed.map(v=>v.name).join(', '):(c<th?`Confiança ${pct(c)} abaixo do limiar ${pct(th)}`:'Validações ok após correção'),
+        status:d.review?(d.review==='aprovado'?'aprovado':'rejeitado'):'aguardando revisão',statusColor:d.review==='aprovado'?OK:d.review?MUTED:WARN,
+        traceShort:d.traceId.slice(0,12)+'…',openTrace:openTrace(d),
+        fields:[F('cnpj','CNPJ',d.vals.cnpj,true),F('emitente','Emitente',d.s.emitente,false),F('data','Emissão',fmtDate(d.s.data),false),F('total','Total (R$)',d.vals.total,true),F('itens','Itens',`${d.s.itens.length} linhas`,false)],
+        validations:vs.map(v=>({...v,icon:v.ok?'✓':'✕',color:v.ok?OK:ERR,bg:v.ok?'var(--okbg,#EEF6F1)':'var(--errbg,#FBECEA)'})),
+        items:d.s.itens.map(([desc,q,u])=>({desc,qty:String(q).replace('.',','),unit:numStr(u),sub:numStr(r2(q*u))})),sum:brl(d.s.sum),pending:ed,
+        approve:()=>{d.review='aprovado';this.pushEvent({svc:'api',doc:d.code,msg:'revisão humana · documento.aprovado publicado',level:'ok'});this.setState({selReview:(pending.find(x=>x!==d)||{}).uid||null});},
+        reject:()=>{d.review='rejeitado';this.pushEvent({svc:'api',doc:d.code,msg:'revisão humana · documento.rejeitado',level:'warn'});this.setState({selReview:(pending.find(x=>x!==d)||{}).uid||null});}};
+    }
+    // trace
+    const tDoc=this.docs.find(d=>d.uid===st.selTrace)||this.docs[0];
+    const traceList=this.docs.slice(0,16).map(d=>{const on=tDoc&&d.uid===tDoc.uid,[,color]=stageOf(d);return{code:d.code,dur:d.outcome?ms(d.end):ms(d.t)+'…',color,pick:()=>this.setState({selTrace:d.uid}),bg:on?'var(--soft,#FBF9F5)':'var(--panel,#FFFFFF)',mark:on?`inset 3px 0 0 ${ACC}`:'none'};});
+    let tr=null;
+    if(tDoc){const d=tDoc,E=d.end,[status,color]=stageOf(d);
+      tr={code:d.code,file:d.file,traceId:d.traceId,dur:ms(d.outcome?E:d.t),spanCount:String(d.spans.filter(s=>s.start<=d.t).length),status,color,
+        ticks:[0,.5,1].map(f=>ms(E*f)),
+        spans:d.spans.filter(s=>s.start<=d.t).map(s=>{const w=Math.min(s.dur,d.t-s.start);return{svc:SVC[s.svc].label,color:SVC[s.svc].color,name:s.name,textColor:s.status==='error'?ERR:INK,left:(s.start/E*100)+'%',width:Math.max(.4,w/E*100)+'%',barColor:s.status==='error'?ERR:s.status==='wait'?'var(--waitbar,#E8D3AE)':SVC[s.svc].color,opacity:w<s.dur?.55:1,dur:ms(s.dur)};})};}
+    const legend=Object.values(SVC).map(s=>({label:s.label,color:s.color}));
+    // dlq
+    const policy=[{label:'tentativa 1',bg:'var(--bg,#F3F1EC)',fg:INK},{label:'+1s',bg:'var(--warnbg,#FBEBD8)',fg:WARN},{label:'tentativa 2',bg:'var(--bg,#F3F1EC)',fg:INK},{label:'+2s',bg:'var(--warnbg,#FBEBD8)',fg:WARN},{label:'tentativa 3',bg:'var(--bg,#F3F1EC)',fg:INK},{label:'+4s',bg:'var(--warnbg,#FBEBD8)',fg:WARN},{label:'tentativa 4',bg:'var(--bg,#F3F1EC)',fg:INK},{label:'→ '+B.dlq,bg:'var(--errbg,#FBECEA)',fg:ERR}];
+    const dlqRows=dlqDocs.map(d=>({code:d.code,file:d.file,err:d.err,attempts:String(d.attempts),retry:()=>this.reprocess(d)}));
+    return{
+      rootRef:this.rootRef,isDark:st.theme==='dark',isLight:st.theme!=='dark',themeTitle:st.theme==='dark'?'Mudar para tema claro':'Mudar para tema escuro',toggleTheme:()=>{const th=st.theme==='dark'?'light':'dark';try{localStorage.setItem('pipefiscal.theme',th);}catch(e){}this.setState({theme:th});},
+      dir:isSidebar?'row':'column',isSidebar,isTop:!isSidebar,
+      isPlan:st.screen==='plan',isUpload:st.screen==='upload',isPipe:st.screen==='pipe',isReview:st.screen==='review',isTrace:st.screen==='trace',isDlq:st.screen==='dlq',
+      navPlan,navProd,navAll:[...navPlan,...navProd],brokerOpts,
+      togglePause:()=>this.setState({paused:!st.paused}),pauseLabel:st.paused?'Retomar':'Pausar',
+      cycleSpeed:()=>this.setState({speed:st.speed===1?2:st.speed===2?4:1}),speedLabel:st.speed+'×',
+      toggleAuto:()=>this.setState({auto:!st.auto}),autoShort:st.auto?'Tráfego on':'Tráfego off',autoLabel:st.auto?'Tráfego automático ligado':'Tráfego automático desligado',autoDot:st.auto?'#6FBF8A':'#8C877D',
+      planDone,planTotal,planPct:pct(planDone/planTotal),phases,reqs,tests,testsSummary:passN?`${passN}/${TESTS.length} passaram`:`${TESTS.length} testes`,runSuite:()=>this.runSuite(),runLabel:st.running?'Rodando…':'Rodar suíte',
+      samples:SAMPLES.map(s=>({...s,totalFmt:brl(s.total),cenColor:s.cen==='Deve aprovar'?OK:WARN,send:()=>{const n=String(this.seq+1).padStart(4,'0');this.createDoc(s,s.file.replace(/(\.\w+)$/,`_${n}$1`),s.key+'-u'+n);}})),
+      sendAll:()=>SAMPLES.forEach(s=>{const n=String(this.seq+1).padStart(4,'0');this.createDoc(s,s.file.replace(/(\.\w+)$/,`_${n}$1`),s.key+'-u'+n);}),
+      sendDuplicate:()=>this.createDoc(SAMPLES[0],SAMPLES[0].file,SAMPLES[0].key),
+      onFiles:e=>{Array.from(e.target.files||[]).forEach(f=>{const s=SAMPLES[Math.floor(Math.random()*SAMPLES.length)];this.createDoc(s,f.name,f.name+':'+f.size+':'+f.lastModified);});e.target.value='';},
+      uploads:this.uploads,noUploads:!this.uploads.length,
+      brokerLabel:B.label,brokerGroup:B.group,metrics,nodes,outcomes,docRows,queues,envelope,
+      simDot:st.simOn?'var(--ok,#2E7D4F)':'var(--line3,#C9C3B6)',simStatus:st.simOn?`ws://localhost:8090/events · ${this.mirrored} eventos espelhados`:'desconectado',simBtn:st.simOn?'Desconectar':'Conectar',toggleSim:()=>this.setState({simOn:!st.simOn}),
+      events:this.events.slice(0,40).map(evMap),eventsShort:this.events.slice(0,10).map(evMap),liveDot:st.paused?'#8C877D':'#6FBF8A',
+      thresholdFmt:pct(th),reviewList,noReview:!reviewDocs.length,hasSel:!!sel,sel:sel||{},
+      traceList,hasTrace:!!tr,tr:tr||{},legend,
+      dlqName:`${B.dlq} · ${B.label}`,policy,retryHow:B.how,dlqRows,noDlq:!dlqRows.length};
+  }
+}
+</script>
+</body>
+</html>
