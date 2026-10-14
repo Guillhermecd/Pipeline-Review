@@ -1,9 +1,11 @@
 package com.bimd.fiscalpipeline.controller;
 
+import com.bimd.fiscalpipeline.domain.dto.DocumentCorrectionRequest;
 import com.bimd.fiscalpipeline.domain.dto.DocumentResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
 import com.bimd.fiscalpipeline.security.CustomUserDetails;
 import com.bimd.fiscalpipeline.service.document.DocumentService;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -13,8 +15,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -50,5 +54,20 @@ public class DocumentController {
     @PostMapping("/{id}/reprocessar")
     public ResponseEntity<DocumentResponse> reprocess(@PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(documentService.reprocess(id));
+    }
+
+    @PatchMapping("/{id}")
+    public DocumentResponse correct(@PathVariable UUID id, @Valid @RequestBody DocumentCorrectionRequest correction) {
+        return documentService.correct(id, correction);
+    }
+
+    @PostMapping("/{id}/aprovar")
+    public DocumentResponse approve(@AuthenticationPrincipal CustomUserDetails principal, @PathVariable UUID id) {
+        return documentService.approve(id, principal.getUser().getId());
+    }
+
+    @PostMapping("/{id}/rejeitar")
+    public DocumentResponse reject(@AuthenticationPrincipal CustomUserDetails principal, @PathVariable UUID id) {
+        return documentService.reject(id, principal.getUser().getId());
     }
 }

@@ -5,6 +5,6 @@ import org.springframework.http.HttpStatus;
 public class DocumentTooLargeException extends BusinessException {
 
     public DocumentTooLargeException(int maxSizeMb) {
-        super(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the %d MB limit".formatted(maxSizeMb));
+        super(HttpStatus.PAYLOAD_TOO_LARGE, "O arquivo excede o limite de %d MB".formatted(maxSizeMb));
     }
 }

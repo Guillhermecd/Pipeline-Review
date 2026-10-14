@@ -112,8 +112,8 @@ class RetryBackoffIT extends AbstractIntegrationTest {
                         && extractionRepository.findByDocumentId(documentId).isEmpty());
 
         worker().extracted(secondInput, 1);
-        Document extracted = awaitStatus(documentId, DocumentStatus.EXTRACTED);
-        assertThat(extracted.getKind()).isEqualTo("NF-e");
+        Document approved = awaitStatus(documentId, DocumentStatus.AUTO_APPROVED);
+        assertThat(approved.getKind()).isEqualTo("NF-e");
         assertThat(extractionRepository.findByDocumentId(documentId))
                 .singleElement()
                 .satisfies(extraction -> assertThat(extraction.getRequestId()).isEqualTo(secondRequestId));
@@ -126,7 +126,9 @@ class RetryBackoffIT extends AbstractIntegrationTest {
         UUID requestId = documentRepository.findById(documentId).orElseThrow().getCurrentRequestId();
 
         mockMvc.perform(post(DOCUMENTS_URL + "/" + documentId + "/reprocessar").header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.startsWith("Só documentos na DLQ podem ser reprocessados")));
 
         assertThat(documentRepository.findById(documentId).orElseThrow().getCurrentRequestId())
                 .isEqualTo(requestId);

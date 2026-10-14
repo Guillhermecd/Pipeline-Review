@@ -5,7 +5,7 @@ import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.exception.DocumentNotFoundException;
-import com.bimd.fiscalpipeline.exception.IllegalStateTransitionException;
+import com.bimd.fiscalpipeline.exception.DocumentNotDeadLetteredException;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.outbox.OutboxWriter;
@@ -39,7 +39,7 @@ public class ReprocessService {
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
         // RECEIVED also goes to QUEUED (the relay does it), so the state machine alone is not enough here.
         if (document.getStatus() != DocumentStatus.DEAD_LETTERED) {
-            throw new IllegalStateTransitionException(document.getCode(), document.getStatus(), DocumentStatus.QUEUED);
+            throw new DocumentNotDeadLetteredException(document.getCode(), document.getStatus());
         }
         stateService.move(document, DocumentStatus.QUEUED);
         document.setCurrentRequestId(UUID.randomUUID());

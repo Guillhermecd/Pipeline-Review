@@ -93,7 +93,7 @@ class PipelineStateServiceTest {
 
         assertThatThrownBy(() -> service.move(document, DocumentStatus.QUEUED))
                 .isInstanceOf(IllegalStateTransitionException.class)
-                .hasMessage("Document DOC-1007 cannot go from AUTO_APPROVED to QUEUED");
+                .hasMessage("O documento DOC-1007 não pode passar de AUTO_APPROVED para QUEUED");
 
         assertThat(document.getStatus()).isEqualTo(DocumentStatus.AUTO_APPROVED);
     }

@@ -6,6 +6,6 @@ import org.springframework.http.HttpStatus;
 public class DocumentNotFoundException extends BusinessException {
 
     public DocumentNotFoundException(UUID id) {
-        super(HttpStatus.NOT_FOUND, "Document %s not found".formatted(id));
+        super(HttpStatus.NOT_FOUND, "Documento %s não encontrado".formatted(id));
     }
 }

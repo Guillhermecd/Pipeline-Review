@@ -66,9 +66,22 @@ Com compose, backend e worker rodando:
 ```sh
 cd worker && uv run python scripts/smoke.py            # usa a NFC-e de amostra
 cd worker && uv run python scripts/smoke.py nota.pdf   # ou um arquivo seu
+cd worker && uv run python scripts/smoke.py --samples  # as seis amostras, conferindo o cenário de cada uma
 ```
 
-O script envia o arquivo pela API, acompanha o status do documento e valida a extração gravada contra `contracts/`. Termina com código 1 se o documento for para a DLQ.
+O script envia o arquivo pela API, acompanha o status do documento, valida a extração gravada contra `contracts/` e mostra a decisão com as validações. Termina com código 1 se o documento for para a DLQ ou, com `--samples`, se alguma amostra não terminar como o cenário dela prevê (aprovação automática ou revisão).
+
+Corrigir e decidir um documento em revisão:
+
+```sh
+curl -X PATCH localhost:1337/api/v1/documentos/$ID -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"total":"271.30"}'
+
+curl -X POST localhost:1337/api/v1/documentos/$ID/aprovar  -H "Authorization: Bearer $TOKEN"
+curl -X POST localhost:1337/api/v1/documentos/$ID/rejeitar -H "Authorization: Bearer $TOKEN"
+```
+
+O limiar de confiança vem de `REVIEW_CONFIDENCE_THRESHOLD` (padrão `0.85`).
 
 Trocar o broker dos próximos documentos e reprocessar um documento da DLQ:
 

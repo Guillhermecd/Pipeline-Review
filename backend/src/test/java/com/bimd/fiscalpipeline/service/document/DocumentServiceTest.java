@@ -15,13 +15,18 @@ import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
 import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
+import com.bimd.fiscalpipeline.domain.mapper.DocumentDetails;
 import com.bimd.fiscalpipeline.domain.mapper.DocumentMapper;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.exception.DocumentTooLargeException;
 import com.bimd.fiscalpipeline.exception.DuplicateDocumentException;
 import com.bimd.fiscalpipeline.exception.InvalidDocumentFileException;
 import com.bimd.fiscalpipeline.exception.UnsupportedDocumentTypeException;
+import com.bimd.fiscalpipeline.repository.DocumentItemRepository;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
+import com.bimd.fiscalpipeline.repository.FieldConfidenceRepository;
+import com.bimd.fiscalpipeline.repository.FiscalDataRepository;
+import com.bimd.fiscalpipeline.repository.ValidationResultRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.storage.StorageService;
 import com.bimd.fiscalpipeline.util.Sha256;
@@ -65,6 +70,21 @@ class DocumentServiceTest {
     @Mock
     private DocumentMapper documentMapper;
 
+    @Mock
+    private DocumentReviewService reviewService;
+
+    @Mock
+    private FiscalDataRepository fiscalDataRepository;
+
+    @Mock
+    private DocumentItemRepository documentItemRepository;
+
+    @Mock
+    private FieldConfidenceRepository fieldConfidenceRepository;
+
+    @Mock
+    private ValidationResultRepository validationResultRepository;
+
     private DocumentService service;
 
     @BeforeEach
@@ -78,9 +98,15 @@ class DocumentServiceTest {
                 reprocessService,
                 storageService,
                 eventPublisher,
-                documentMapper,
-                properties,
-                clock);
+                reviewService,
+                new DocumentResponseAssembler(
+                        fiscalDataRepository,
+                        documentItemRepository,
+                        fieldConfidenceRepository,
+                        validationResultRepository,
+                        documentMapper,
+                        clock),
+                properties);
     }
 
     @Test
@@ -97,7 +123,7 @@ class DocumentServiceTest {
         verify(storageService).upload(expectedFileKey, "application/pdf", CONTENT);
         verify(documentRegistrar).register(USER_ID, upload, IDEMPOTENCY_KEY, expectedFileKey);
         // 13:20:00 (fixed clock) minus 13:19:58 (receivedAt).
-        verify(documentMapper).toResponse(registered, 2000L);
+        verify(documentMapper).toResponse(registered, DocumentDetails.EMPTY, 2000L);
     }
 
     @Test
@@ -169,7 +195,7 @@ class DocumentServiceTest {
 
         assertThatThrownBy(() -> service.upload(USER_ID, new DocumentUpload("grande.pdf", "application/pdf", oversized)))
                 .isInstanceOf(DocumentTooLargeException.class)
-                .hasMessage("File exceeds the 1 MB limit");
+                .hasMessage("O arquivo excede o limite de 1 MB");
 
         verify(storageService, never()).upload(anyString(), anyString(), any());
     }

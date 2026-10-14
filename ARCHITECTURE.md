@@ -59,6 +59,7 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Um só pacote OpenCV.** `opencv-contrib-python`, o mesmo que o PaddleOCR traz. Dois pacotes `opencv-*` dividem o módulo `cv2` e quebram o import.
 - **Gemini sem retry do SDK.** `HttpRetryOptions(attempts=1)`: quem repete é o broker. Retries empilhados se multiplicariam.
 - **Modelo padrão `gemini-3.5-flash-lite`.** `gemini-2.5-flash` foi aposentado (404). Em 13/10/2026 os modelos `flash` da série 3 levaram de 25 a 90 s por chamada, com 503 e 504 frequentes; o `flash-lite` respondeu em 1 a 2 s com o mesmo resultado nas amostras. A confiança vem da conferência do valor contra o texto do documento, não do modelo. Troca por `LLM_MODEL`.
+- **Plano gratuito do Gemini.** Decisão do projeto em 13/10/2026, junto com a confirmação do `flash-lite`. No plano gratuito o Google informa que pode usar o conteúdo enviado para melhorar seus produtos. O CPF é mascarado antes do envio, mas CNPJ, emitente e itens seguem no texto. Conferir os termos vigentes antes de enviar documento real de terceiros. O limite de requisições do plano aparece como 429, que o worker trata como falha transitória (retry 1 s · 2 s · 4 s).
 - **Modelos do OCR** são baixados na primeira execução (Hugging Face) e ficam em `~/.paddlex`.
 
 ## Mensageria e confiabilidade
@@ -74,6 +75,21 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Falha ao gravar no backend.** Se o banco cair, o listener repete a mensagem com backoff até conseguir: no Kafka o intervalo cresce até 30 s; no RabbitMQ, esgotadas 5 tentativas, a mensagem volta para a fila. Desistir perderia o resultado e deixaria o documento parado. Mensagem ilegível é descartada na primeira leitura, então não há laço com mensagem envenenada.
 - **Um broker fora do ar não para o outro.** No worker cada broker tem seu laço de consumo, que reconecta a cada 5 s. No backend o relay trata cada broker em separado.
 - **Textos de `retryPolicy`.** São os do mock do frontend, como o `BACKEND.md` pede. Eles citam `@RetryableTopic` e `x-death`, que a implementação não usa.
+
+## Validação, score e revisão
+
+- **Tudo em uma transação.** Ao receber `documento.extraido`, o backend grava a extração, os campos, os itens e as confianças, roda as regras, calcula o score e decide, na mesma transação da mudança de estado. O documento passa por `EXTRACTED` e `VALIDATING` sem que ninguém de fora veja esses estados.
+- **O payload não é confiável.** `ExtractionPayloadReader` lê cada valor com defesa: ausente, fora do formato ou maior que a coluna vira nulo (campos) ou é ignorado (itens), e a confiança do campo vai a zero. Como o listener repete até conseguir, uma exceção causada pelos dados travaria a fila. Com isso o pior caso é o documento ir para revisão. O byte NUL é removido da mensagem, porque o PostgreSQL não o aceita em texto nem em `jsonb`.
+- **CNPJ grande demais é descartado, nome é cortado.** Um CNPJ com mais de 18 caracteres vira nulo; um emitente com mais de 255 é truncado.
+- **Textos sem definição no `BACKEND.md`.** Total ausente: `R$ 271,30 vs total ausente`. Data ausente ou ilegível: `data ausente`, e a regra falha. CNPJ com caractere que não é letra nem dígito, ou com letra no dígito verificador: `caracteres inválidos para um CNPJ`.
+- **Soma dos itens.** Soma `quantidade × preço` de todas as linhas e arredonda uma vez para centavos (meio para cima), como a amostra é gerada.
+- **Score com 4 casas.** O valor comparado com o limiar é o mesmo que fica em `documents.confidence`. Um score de 0,8499 aparece como 85% e ainda assim vai para revisão.
+- **Itens sem confiança própria de origem.** `field_confidences` guarda `ITEMS` com origem `llm`; o contrato só traz `itemsConfidence`.
+- **Correção não muda o motivo.** O `PATCH` recalcula regras e score, mas `reason` continua sendo o motivo pelo qual o documento foi para revisão.
+- **Correções gravadas na decisão.** `reviews.corrections` é calculado ao aprovar ou rejeitar, comparando o valor extraído com o atual, só para campos que um revisor alterou. Formato: `{"total": {"from": "283.80", "to": "271.30"}}`.
+- **O revisor dá a palavra final.** Documento aprovado automaticamente recebe `finishedAt` na decisão. Documento enviado para revisão fica com `finishedAt` nulo e só o recebe quando o revisor aprova ou rejeita; até lá `durationMs` continua contando.
+- **Mensagens de erro em português.** O campo `message` do erro é escrito para quem usa a tela. Há tratamento para corpo ilegível ou valor fora da lista (400), identificador que não é UUID (400), correção vazia (400), ação de revisão em documento que não está em revisão (409), reprocessar documento fora da DLQ (409), banco indisponível (503) e falha inesperada (500, com a causa só no log). As mensagens de login são do template e seguem em inglês.
+- **`GET /api/v1/configuracao`** entrou nesta fase, por expor o limiar.
 
 ## Upload e idempotência
 
