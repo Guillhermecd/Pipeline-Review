@@ -130,10 +130,12 @@ worker/
     publishers/            # publica resultado, progresso e DLQ com confirmação
     domain/                # modelos Pydantic gerados/validados contra contracts/
     config/                # pydantic-settings (.env)
-    telemetry/             # setup do OpenTelemetry
+    storage/               # leitura do arquivo no MinIO (S3), atrás de um Protocol
+    telemetry/             # setup do OpenTelemetry (fase F5)
     helpers/               # funções puras: normalização de texto, valores, datas
-  tests/{unit,integration,fixtures}/
-  scripts/evaluate.py      # mede acerto por campo no conjunto rotulado (fora do CI)
+  tests/{unit,integration}/
+  scripts/                 # generate_samples.py (amostras), smoke.py (ponta a ponta), probes.py
+                           # evaluate.py: mede acerto por campo no conjunto rotulado (fora do CI, a fazer)
   pyproject.toml · uv.lock · .env.example
 ```
 
@@ -203,12 +205,13 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 RABBITMQ_URL=amqp://guest:guest@localhost:5673
 S3_ENDPOINT=http://localhost:9050
 S3_BUCKET=pipeline-fiscal
+S3_REGION=us-east-1
 S3_ACCESS_KEY_ID=worker-readonly
 S3_SECRET_ACCESS_KEY=change-me
 OTEL_SERVICE_NAME=fiscal-worker
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-LLM_API_KEY=
-LLM_MODEL=
+GEMINI_API_KEY=
+LLM_MODEL=gemini-3.5-flash-lite
 LLM_TIMEOUT_SECONDS=30
 OCR_LANG=pt
 ```

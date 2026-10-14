@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bimd.com/pipeline-fiscal/events/documento-recebido.payload.schema.json",
+  "title": "DocumentReceivedPayload",
+  "description": "Payload de documento.recebido e de documento.retry: onde está o arquivo a extrair.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fileKey", "mimeType", "fileName"],
+  "properties": {
+    "fileKey": { "type": "string", "minLength": 1 },
+    "mimeType": { "type": "string", "pattern": "^(application/pdf|image/.+)$" },
+    "fileName": { "type": "string", "minLength": 1 }
+  }
+}

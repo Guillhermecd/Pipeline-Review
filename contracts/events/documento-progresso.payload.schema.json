@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bimd.com/pipeline-fiscal/events/documento-progresso.payload.schema.json",
+  "title": "DocumentProgressPayload",
+  "description": "Payload de documento.progresso: o estágio em que o worker entrou.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stage", "attempt"],
+  "properties": {
+    "stage": { "enum": ["OCR", "EXTRACTING", "RETRY_WAIT"] },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "error": { "type": "string" },
+    "retryInMs": { "type": "integer", "minimum": 0 }
+  },
+  "if": { "properties": { "stage": { "const": "RETRY_WAIT" } } },
+  "then": { "required": ["error", "retryInMs"] }
+}

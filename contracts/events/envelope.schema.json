@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bimd.com/pipeline-fiscal/events/envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Corpo de toda mensagem trocada entre a API e o worker. O traceparent vai nos headers da mensagem, não aqui. O payload é validado pelo schema do eventType.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "documentId",
+    "documentCode",
+    "idempotencyKey",
+    "requestId",
+    "attempt",
+    "broker",
+    "occurredAt",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": {
+      "enum": ["documento.recebido", "documento.retry", "documento.progresso", "documento.extraido"]
+    },
+    "schemaVersion": { "const": 1 },
+    "documentId": { "type": "string", "format": "uuid" },
+    "documentCode": { "type": "string", "pattern": "^DOC-[0-9]+$" },
+    "idempotencyKey": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "requestId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifica a tentativa de processamento. Toda mensagem do worker repete o requestId que recebeu; o backend descarta o que não bate com o requestId atual do documento."
+    },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "broker": { "enum": ["kafka", "rabbitmq"] },
+    "occurredAt": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "payload": { "type": "object" }
+  }
+}

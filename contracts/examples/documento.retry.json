@@ -1,0 +1,17 @@
+{
+  "eventId": "7b0d8c1e-52f4-4c0a-9d6b-1f3e5a7c9b24",
+  "eventType": "documento.retry",
+  "schemaVersion": 1,
+  "documentId": "3f3e5405-ac3f-48a8-827a-574cc2661fa2",
+  "documentCode": "DOC-1001",
+  "idempotencyKey": "sha256:afc5ab14d3622a997d11f1b849ae167e3f02dee6f8dfb4b502008e59fd3d97d6",
+  "requestId": "4228b572-9853-4424-8565-8298820e0831",
+  "attempt": 2,
+  "broker": "kafka",
+  "occurredAt": "2026-10-13T14:37:25.910Z",
+  "payload": {
+    "fileKey": "documents/afc5ab14d3622a997d11f1b849ae167e3f02dee6f8dfb4b502008e59fd3d97d6/nota-f1.pdf",
+    "fileName": "nota-f1.pdf",
+    "mimeType": "application/pdf"
+  }
+}
