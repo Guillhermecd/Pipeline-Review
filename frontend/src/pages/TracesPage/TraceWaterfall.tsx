@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { PipelineDocument, ServiceName, Span } from '../../api/modules/types';
+import type { PipelineDocument, ServiceName, Span, Trace } from '../../api/modules/types';
 import { Card } from '../../components/ui/Card';
 import { color, mono, serviceColor } from '../../theme';
 import { duration } from '../../utils/format';
@@ -24,9 +24,9 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function SpanRow({ span, doc }: { span: Span; doc: PipelineDocument }) {
-  const total = doc.durationMs;
-  const visible = Math.min(span.durationMs, doc.elapsedMs - span.startMs);
+function SpanRow({ span, trace }: { span: Span; trace: Trace }) {
+  const total = trace.durationMs;
+  const visible = Math.min(span.durationMs, trace.elapsedMs - span.startMs);
   const left = (span.startMs / total) * 100;
   const width = Math.max(MIN_BAR_PERCENT, (visible / total) * 100);
   return (
@@ -80,10 +80,14 @@ function SpanRow({ span, doc }: { span: Span; doc: PipelineDocument }) {
   );
 }
 
-export function TraceWaterfall({ doc }: { doc: PipelineDocument }) {
+type TraceWaterfallProps = { doc: PipelineDocument; trace: Trace | null; error: string | null };
+
+const EMPTY_TRACE: Trace = { durationMs: 1, elapsedMs: 0, spans: [] };
+
+export function TraceWaterfall({ doc, trace: loaded, error }: TraceWaterfallProps) {
   const status = documentStatus(doc);
-  const shownDuration = doc.outcome ? doc.durationMs : doc.elapsedMs;
-  const ticks = [0, 0.5, 1].map((fraction) => duration(doc.durationMs * fraction));
+  const trace = loaded ?? EMPTY_TRACE;
+  const ticks = [0, 0.5, 1].map((fraction) => duration(trace.durationMs * fraction));
 
   return (
     <Card
@@ -106,10 +110,10 @@ export function TraceWaterfall({ doc }: { doc: PipelineDocument }) {
         </div>
         <div style={{ display: 'flex', gap: 18 }}>
           <Stat label="Duração">
-            <span style={mono(14)}>{duration(shownDuration)}</span>
+            <span style={mono(14)}>{duration(loaded ? trace.elapsedMs : doc.durationMs)}</span>
           </Stat>
           <Stat label="Spans">
-            <span style={mono(14)}>{doc.spans.length}</span>
+            <span style={mono(14)}>{trace.spans.length}</span>
           </Stat>
           <Stat label="Resultado">
             <span style={{ color: status.tone }}>{status.label}</span>
@@ -164,9 +168,16 @@ export function TraceWaterfall({ doc }: { doc: PipelineDocument }) {
         <span style={{ textAlign: 'right' }}>dur.</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {doc.spans.map((span, index) => (
-          <SpanRow key={index} span={span} doc={doc} />
+        {trace.spans.map((span, index) => (
+          <SpanRow key={index} span={span} trace={trace} />
         ))}
+        {!loaded && (
+          <span
+            style={{ fontSize: 12.5, color: error ? color.err : color.muted, padding: '8px 0' }}
+          >
+            {error ?? 'Aguardando os spans deste documento…'}
+          </span>
+        )}
       </div>
     </Card>
   );

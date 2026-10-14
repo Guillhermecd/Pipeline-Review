@@ -7,6 +7,7 @@ import { color, mono } from '../../theme';
 import { EventsCard } from './EventsCard';
 import { FlowSection } from './FlowSection';
 import { BrokerCard, DocumentsCard, EnvelopeCard, MetricsStrip } from './PipelinePanels';
+import { IS_LIVE } from '../../config';
 import { usePipelineView } from './usePipelineView';
 
 const SIMULATOR_URL = import.meta.env.VITE_MESSAGING_SIMULATOR_URL ?? 'ws://localhost:8090/events';
@@ -30,12 +31,15 @@ function SimulatorPill({ connected, mirrored }: { connected: boolean; mirrored: 
       <span style={{ ...mono(11.5), color: color.muted }}>
         {connected ? `${SIMULATOR_URL} · ${mirrored} eventos espelhados` : 'desconectado'}
       </span>
-      <Button
-        onClick={PipelineService.toggleSimulator}
-        style={{ fontSize: 12.5, padding: '6px 11px', borderRadius: 5 }}
-      >
-        {connected ? 'Desconectar' : 'Conectar'}
-      </Button>
+      {/* No modo live o espelhamento é ligado no backend (fase F6), não pela tela. */}
+      {!IS_LIVE && (
+        <Button
+          onClick={PipelineService.toggleSimulator}
+          style={{ fontSize: 12.5, padding: '6px 11px', borderRadius: 5 }}
+        >
+          {connected ? 'Desconectar' : 'Conectar'}
+        </Button>
+      )}
     </div>
   );
 }

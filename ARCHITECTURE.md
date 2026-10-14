@@ -91,6 +91,26 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Mensagens de erro em português.** O campo `message` do erro é escrito para quem usa a tela. Há tratamento para corpo ilegível ou valor fora da lista (400), identificador que não é UUID (400), correção vazia (400), ação de revisão em documento que não está em revisão (409), reprocessar documento fora da DLQ (409), banco indisponível (503) e falha inesperada (500, com a causa só no log). As mensagens de login são do template e seguem em inglês.
 - **`GET /api/v1/configuracao`** entrou nesta fase, por expor o limiar.
 
+## Observabilidade e modo live
+
+- **Um trace por documento.** O `trace_id` do documento é o trace da requisição de upload. O outbox guarda o span pai, o relay continua a partir dele, o worker lê o `traceparent` do header, abre seus spans e devolve o próprio contexto nas mensagens que publica, e a API continua esse contexto na validação. Sem tracing ligado o `trace_id` é aleatório e nada mais muda.
+- **API só com a API do OpenTelemetry.** O código usa `opentelemetry-api`; quem exporta é o agente Java, ligado pelo perfil Maven `otel` (`./mvnw spring-boot:run -Potel`). Sem o agente (testes, execução comum) as chamadas não fazem nada.
+- **Worker com propagação manual.** `telemetry/tracing.py` extrai e injeta o `traceparent`. O provider sempre existe, então o trace segue pelos headers mesmo sem exportar.
+- **Só traces.** Métricas e logs do agente ficam desligados: o Jaeger só recebe traces.
+- **A tela de Traces mostra só spans com `pipeline.node`.** São os que o pipeline abre à mão, com os nomes da §9.2 do `BACKEND.md`. O agente grava centenas de spans automáticos por documento (JDBC, HTTP, broker), que são descartados. A §9.3 fala em herdar o nó do span pai; optei por não herdar, para o waterfall ficar igual ao do mock.
+- **Serviço do span.** `db.system` vira `db`, `messaging.system` vira `broker`; o resto é `api` ou `worker` conforme o processo.
+- **Espera de retry.** O span `retry +{n}s → {fila}` é criado pelo worker na tentativa seguinte, começando no horário da falha (o `occurredAt` da mensagem de retry).
+- **Reprocessar** roda em um trace próprio (o da requisição), mas a mensagem volta para o trace do documento, com um span pai que não existe no Jaeger.
+- **Trace recente pode não existir ainda.** Os spans chegam ao Jaeger em lotes, alguns segundos depois. `GET /traces/{id}` responde 404 nesse caso e a tela tenta de novo a cada 3 s. O Jaeger local guarda os traces em memória: reiniciar o container apaga o histórico.
+- **Stream `/eventos` só depois do commit.** Mudanças viram eventos do Spring e são enviadas com `@TransactionalEventListener(AFTER_COMMIT)`. Uma tentativa que falhou e foi repetida não aparece na tela.
+- **Conexões SSE em memória.** Vale para uma instância da API.
+- **`pipeline_events.sequence`** (migração V2) dá a ordem de gravação; eventos do mesmo milissegundo ficavam sem ordem. A tabela é cortada nos 500 mais recentes a cada minuto.
+- **401 sem token.** Requisição sem token válido responde 401 (antes 403), para o frontend saber que precisa de login.
+- **Simulador de mensageria** aparece como desconectado; o espelhamento é da fase F6.
+- **Frontend: dois modos.** `VITE_API_MODE=mock` (padrão) simula tudo no navegador; `live` usa login, REST e SSE. Os services escolhem a fonte; as páginas são as mesmas. `api/live/mappers.ts` converte o formato da API para o que as telas usam.
+- **Correção de campo no modo live.** O campo dispara a cada tecla; o envio espera 600 ms de pausa e ignora total incompleto.
+- **Amostras no modo live.** "Enviar" manda o arquivo real de `frontend/public/samples/` com bytes extras no fim, para cada envio ser um arquivo novo. "Testar idempotência" manda os bytes exatos: o primeiro envio é aceito, os seguintes respondem 409.
+
 ## Upload e idempotência
 
 1. A API calcula o SHA-256 do arquivo. Se já existe documento com essa chave, responde 409 e nada é criado.

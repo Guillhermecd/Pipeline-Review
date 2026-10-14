@@ -37,6 +37,18 @@ npm install
 npm run dev                   # http://localhost:5173
 ```
 
+### Frontend contra a API real, com traces
+
+O frontend sobe em modo `mock` por padrão. Para usar a API, o worker e ver traces no Jaeger:
+
+```sh
+cd backend  && ./mvnw spring-boot:run -Potel       # baixa e liga o agente Java do OpenTelemetry
+cd worker   && uv run fiscal-worker                 # com OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 no .env
+cd frontend && VITE_API_MODE=live npm run dev       # ou VITE_API_MODE=live no .env
+```
+
+Entre com o usuário inicial. A tela Pipeline acompanha os documentos pelo stream `GET /api/v1/eventos`, e a tela Traces mostra os spans de cada documento, lidos do Jaeger (`http://localhost:16686`).
+
 | Serviço | Endereço no host |
 |---|---|
 | PostgreSQL | `localhost:5442` (banco `pipeline_fiscal`) |

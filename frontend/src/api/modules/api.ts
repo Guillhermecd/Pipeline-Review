@@ -1,30 +1,53 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
+import { API_BASE_URL, LOGIN_PATH } from '../../config';
+
 const TOKEN_KEY = 'pipefiscal.token';
+const UNAUTHORIZED = 401;
+const NO_CONTENT = 204;
+const GENERIC_ERROR = 'Não foi possível concluir a operação';
 
 export const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
   setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.clear(),
+  clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-type RequestOptions = RequestInit & { auth?: boolean };
+type RequestOptions = RequestInit & { auth?: boolean; baseUrl?: string };
 
 export class ApiError extends Error {
   readonly status: number;
+  // Corpo da resposta, quando veio em JSON (o 409 de duplicata traz o documento existente).
+  readonly body: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body: unknown = null) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
-// Cliente HTTP central. Os services do modo mock ainda não passam por aqui;
-// ao ligar o backend, cada service troca o mockEngine por chamadas a `api`.
+// A API devolve `{ message }` escrito para quem usa a tela; é esse texto que aparece.
+const readError = async (response: Response) => {
+  const text = await response.text();
+  try {
+    const body = JSON.parse(text) as { message?: string };
+    return new ApiError(response.status, body.message || GENERIC_ERROR, body);
+  } catch {
+    return new ApiError(response.status, text || GENERIC_ERROR);
+  }
+};
+
+// Sessão expirada ou token inválido: volta para o login.
+const endSession = () => {
+  authStorage.clear();
+  if (window.location.pathname !== LOGIN_PATH) window.location.assign(LOGIN_PATH);
+};
+
+// Cliente HTTP central do modo live.
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { auth = true, headers, ...init } = options;
+  const { auth = true, baseUrl = API_BASE_URL, headers, ...init } = options;
   const token = authStorage.getToken();
   const isForm = init.body instanceof FormData;
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
       ...(isForm ? {} : { 'Content-Type': 'application/json' }),
@@ -33,7 +56,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     },
   });
   if (!response.ok) {
-    throw new ApiError(response.status, await response.text());
+    if (response.status === UNAUTHORIZED && auth) endSession();
+    throw await readError(response);
   }
-  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+  return response.status === NO_CONTENT ? (undefined as T) : ((await response.json()) as T);
 }

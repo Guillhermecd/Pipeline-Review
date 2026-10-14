@@ -18,7 +18,13 @@ export const duration = (ms: number) =>
 
 export const clockTime = (date: Date = new Date()) => dayjs(date).format('HH:mm:ss');
 
-export const shortDate = (isoDate: string) => dayjs(isoDate).format('DD/MM/YYYY');
+const EMPTY = '—';
+
+// Data ausente ou ilegível (o worker pode não ter conseguido ler) vira um traço.
+export const shortDate = (isoDate: string) => {
+  const date = dayjs(isoDate || null);
+  return date.isValid() ? date.format('DD/MM/YYYY') : EMPTY;
+};
 
 export const quantity = (value: number) => String(value).replace('.', ',');
 
