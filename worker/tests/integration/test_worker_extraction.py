@@ -31,7 +31,17 @@ from fiscal_worker.services.extraction_service import ExtractionService
 from generate_samples import render_pdf
 from probes import KafkaProbe, Probe, RabbitProbe
 from sample_data import SAMPLES_BY_KEY
-from support import TRACEPARENT, FakeFileStore, FakeLlm, FakeQrReader, load_schema, received_envelope, truth
+from support import (
+    TRACE_ID,
+    TRACEPARENT,
+    FakeFileStore,
+    FakeLlm,
+    FakeQrReader,
+    load_schema,
+    received_envelope,
+    trace_id_of,
+    truth,
+)
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="module")]
 
@@ -124,7 +134,7 @@ async def test_extracts_a_document_end_to_end(environment: Environment) -> None:
     assert body["requestId"] == envelope["requestId"]
     assert body["broker"] == environment.kind.value
     assert body["payload"]["fields"]["total"]["value"] == "283.80"
-    assert headers["traceparent"] == TRACEPARENT
+    assert trace_id_of(headers) == TRACE_ID
     assert [message["payload"]["stage"] for message, _ in progress] == ["OCR", "EXTRACTING"]
     assert await environment.probe.collect(QueueRole.DEAD_LETTER, document_id, 1, wait=2) == []
 
@@ -185,7 +195,7 @@ async def test_permanent_failure_goes_straight_to_the_dead_letter_queue(environm
     assert headers["x-error"] == "arquivo corrompido: PDF ilegível"
     assert headers["x-error-class"] == "PermanentError"
     assert headers["x-attempts"] == "1"
-    assert headers["traceparent"] == TRACEPARENT
+    assert trace_id_of(headers) == TRACE_ID
     assert results == []
     assert llm.received_text == []
     progress = await environment.probe.collect(QueueRole.PROGRESS, document_id, 2, wait=2)
@@ -208,7 +218,7 @@ async def test_transient_failure_is_retried_with_backoff_until_it_succeeds(envir
     body, headers = results[0]
     assert body["attempt"] == 3
     assert body["requestId"] == envelope["requestId"]
-    assert headers["traceparent"] == TRACEPARENT
+    assert trace_id_of(headers) == TRACE_ID
     assert dead == []
     assert len(llm.received_text) == 3
     assert [(message["payload"]["stage"], message["attempt"]) for message in progress] == [
@@ -249,7 +259,7 @@ async def test_fourth_transient_failure_goes_to_the_dead_letter_queue(environmen
     assert headers["x-error"] == "LLM 503 Service Unavailable"
     assert headers["x-error-class"] == "TransientError"
     assert headers["x-attempts"] == "4"
-    assert headers["traceparent"] == TRACEPARENT
+    assert trace_id_of(headers) == TRACE_ID
     assert results == []
     assert len(llm.received_text) == 4
     waits = [message["payload"] for message in progress if message["payload"]["stage"] == "RETRY_WAIT"]

@@ -24,14 +24,18 @@ public class KafkaPipelineListener {
 
     @KafkaListener(topics = Topology.KAFKA_OUTPUT_TOPIC, groupId = Topology.API_CONSUMER_GROUP)
     public void onExtracted(ConsumerRecord<String, String> record) {
-        dispatcher.extracted(record.value());
+        dispatcher.extracted(record.value(), headers(record));
     }
 
     @KafkaListener(topics = Topology.KAFKA_DEAD_LETTER_TOPIC, groupId = Topology.API_CONSUMER_GROUP)
     public void onDeadLetter(ConsumerRecord<String, String> record) {
+        dispatcher.deadLetter(record.value(), headers(record));
+    }
+
+    private Map<String, String> headers(ConsumerRecord<String, String> record) {
         Map<String, String> headers = new HashMap<>();
         record.headers()
                 .forEach(header -> headers.put(header.key(), new String(header.value(), StandardCharsets.UTF_8)));
-        dispatcher.deadLetter(record.value(), headers);
+        return headers;
     }
 }

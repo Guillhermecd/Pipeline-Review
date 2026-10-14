@@ -24,14 +24,18 @@ public class RabbitPipelineListener {
 
     @RabbitListener(queues = Topology.RABBIT_OUTPUT_QUEUE)
     public void onExtracted(Message message) {
-        dispatcher.extracted(body(message));
+        dispatcher.extracted(body(message), headers(message));
     }
 
     @RabbitListener(queues = Topology.RABBIT_DEAD_LETTER_QUEUE)
     public void onDeadLetter(Message message) {
+        dispatcher.deadLetter(body(message), headers(message));
+    }
+
+    private Map<String, String> headers(Message message) {
         Map<String, String> headers = new HashMap<>();
         message.getMessageProperties().getHeaders().forEach((name, value) -> headers.put(name, String.valueOf(value)));
-        dispatcher.deadLetter(body(message), headers);
+        return headers;
     }
 
     private String body(Message message) {

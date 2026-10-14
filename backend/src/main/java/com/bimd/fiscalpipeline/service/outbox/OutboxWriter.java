@@ -5,6 +5,7 @@ import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.domain.model.OutboxEvent;
 import com.bimd.fiscalpipeline.messaging.EventEnvelope;
 import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
+import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
 import com.bimd.fiscalpipeline.util.TraceIds;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +30,7 @@ public class OutboxWriter {
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final PipelineTracer tracer;
 
     /** Uses the document's current {@code requestId} and broker; the attempt count starts over. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -58,9 +60,20 @@ public class OutboxWriter {
         event.setBroker(broker);
         event.setDestination(broker.getInputQueue());
         event.setPayload(objectMapper.convertValue(envelope, JSON_OBJECT));
-        // The relay publishes outside the request; this keeps its span under the document's trace.
-        event.setTraceparent(TraceIds.traceparent(document.getTraceId(), TraceIds.newSpanId()));
+        event.setTraceparent(traceparentFor(document));
         event.setCreatedAt(now);
         outboxEventRepository.save(event);
+    }
+
+    /**
+     * The relay publishes outside the request, so the parent of its span is stored with the
+     * message. On upload that parent is the request span. On reprocessing the request runs in a
+     * trace of its own, and the message goes back to the trace of the document.
+     */
+    private String traceparentFor(Document document) {
+        return tracer.currentSpan()
+                .filter(span -> span.getTraceId().equals(document.getTraceId()))
+                .map(span -> TraceIds.traceparent(span.getTraceId(), span.getSpanId()))
+                .orElseGet(() -> TraceIds.traceparent(document.getTraceId(), TraceIds.newSpanId()));
     }
 }

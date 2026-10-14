@@ -3,6 +3,7 @@ package com.bimd.fiscalpipeline.service.outbox;
 import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
 import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
+import com.bimd.fiscalpipeline.domain.enums.PipelineNode;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.domain.model.OutboxEvent;
@@ -12,9 +13,11 @@ import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.pipeline.PipelineStateService;
+import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
 import com.bimd.fiscalpipeline.util.IsoDates;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.opentelemetry.context.Scope;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
@@ -27,12 +30,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OutboxPublisher {
 
+    private static final String QUEUED_STAGE = "Na fila";
+
     private final OutboxEventRepository outboxEventRepository;
     private final DocumentRepository documentRepository;
     private final MessagingRouter messagingRouter;
     private final PipelineStateService stateService;
     private final PipelineEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final PipelineTracer tracer;
     private final Clock clock;
 
     /**
@@ -54,13 +60,24 @@ public class OutboxPublisher {
         OutboxEvent event = pending.get();
         Document document = documentRepository.findByIdForUpdate(event.getDocumentId()).orElseThrow();
 
-        messagingRouter
-                .portFor(broker)
-                .publish(
-                        event.getDestination(),
-                        document.getId().toString(),
-                        toJson(event.getPayload()),
-                        Map.of(Topology.TRACEPARENT_HEADER, event.getTraceparent()));
+        // The stored parent becomes the current context, so the publish span joins the document trace.
+        try (Scope ignored = tracer.continueFrom(event.getTraceparent())) {
+            tracer.inSpan(
+                    "publish " + event.getDestination(),
+                    PipelineTracer.Kind.MESSAGING,
+                    PipelineNode.BROKER,
+                    QUEUED_STAGE,
+                    () -> messagingRouter
+                            .portFor(broker)
+                            .publish(
+                                    event.getDestination(),
+                                    document.getId().toString(),
+                                    toJson(event.getPayload()),
+                                    // The worker continues from the publish span; untraced, from the stored parent.
+                                    Map.of(
+                                            Topology.TRACEPARENT_HEADER,
+                                            tracer.currentTraceparent().orElse(event.getTraceparent()))));
+        }
 
         event.setPublishedAt(IsoDates.format(clock.instant()));
         if (stateService.canMove(document.getStatus(), DocumentStatus.QUEUED)) {
