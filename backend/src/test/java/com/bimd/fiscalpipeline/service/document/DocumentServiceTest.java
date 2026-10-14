@@ -195,7 +195,7 @@ class DocumentServiceTest {
 
         assertThatThrownBy(() -> service.upload(USER_ID, new DocumentUpload("grande.pdf", "application/pdf", oversized)))
                 .isInstanceOf(DocumentTooLargeException.class)
-                .hasMessage("File exceeds the 1 MB limit");
+                .hasMessage("O arquivo excede o limite de 1 MB");
 
         verify(storageService, never()).upload(anyString(), anyString(), any());
     }

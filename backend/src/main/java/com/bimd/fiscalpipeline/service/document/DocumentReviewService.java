@@ -12,6 +12,7 @@ import com.bimd.fiscalpipeline.domain.model.FiscalData;
 import com.bimd.fiscalpipeline.domain.model.Review;
 import com.bimd.fiscalpipeline.exception.DocumentNotFoundException;
 import com.bimd.fiscalpipeline.exception.DocumentNotPendingReviewException;
+import com.bimd.fiscalpipeline.exception.EmptyCorrectionException;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.repository.ExtractionRepository;
 import com.bimd.fiscalpipeline.repository.FieldConfidenceRepository;
@@ -57,6 +58,9 @@ public class DocumentReviewService {
      */
     @Transactional
     public Document correct(UUID documentId, DocumentCorrectionRequest correction) {
+        if (correction.cnpj() == null && correction.total() == null) {
+            throw new EmptyCorrectionException();
+        }
         Document document = pendingReview(documentId);
         FiscalData fiscalData = fiscalDataRepository.findById(documentId).orElseGet(() -> {
             FiscalData created = new FiscalData();
@@ -90,6 +94,8 @@ public class DocumentReviewService {
     private Document decide(UUID documentId, UUID reviewerId, ReviewDecision decision, DocumentStatus status) {
         Document document = pendingReview(documentId);
         stateService.move(document, status);
+        // The reviewer has the final word: the document is finished now, not when it entered review.
+        document.setFinishedAt(now());
 
         Review review = new Review();
         review.setId(UUID.randomUUID());

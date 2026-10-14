@@ -126,7 +126,9 @@ class RetryBackoffIT extends AbstractIntegrationTest {
         UUID requestId = documentRepository.findById(documentId).orElseThrow().getCurrentRequestId();
 
         mockMvc.perform(post(DOCUMENTS_URL + "/" + documentId + "/reprocessar").header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.startsWith("Só documentos na DLQ podem ser reprocessados")));
 
         assertThat(documentRepository.findById(documentId).orElseThrow().getCurrentRequestId())
                 .isEqualTo(requestId);

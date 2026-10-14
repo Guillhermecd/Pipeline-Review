@@ -59,6 +59,7 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Um só pacote OpenCV.** `opencv-contrib-python`, o mesmo que o PaddleOCR traz. Dois pacotes `opencv-*` dividem o módulo `cv2` e quebram o import.
 - **Gemini sem retry do SDK.** `HttpRetryOptions(attempts=1)`: quem repete é o broker. Retries empilhados se multiplicariam.
 - **Modelo padrão `gemini-3.5-flash-lite`.** `gemini-2.5-flash` foi aposentado (404). Em 13/10/2026 os modelos `flash` da série 3 levaram de 25 a 90 s por chamada, com 503 e 504 frequentes; o `flash-lite` respondeu em 1 a 2 s com o mesmo resultado nas amostras. A confiança vem da conferência do valor contra o texto do documento, não do modelo. Troca por `LLM_MODEL`.
+- **Plano gratuito do Gemini.** Decisão do projeto em 13/10/2026, junto com a confirmação do `flash-lite`. No plano gratuito o Google informa que pode usar o conteúdo enviado para melhorar seus produtos. O CPF é mascarado antes do envio, mas CNPJ, emitente e itens seguem no texto. Conferir os termos vigentes antes de enviar documento real de terceiros. O limite de requisições do plano aparece como 429, que o worker trata como falha transitória (retry 1 s · 2 s · 4 s).
 - **Modelos do OCR** são baixados na primeira execução (Hugging Face) e ficam em `~/.paddlex`.
 
 ## Mensageria e confiabilidade
@@ -86,7 +87,8 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Itens sem confiança própria de origem.** `field_confidences` guarda `ITEMS` com origem `llm`; o contrato só traz `itemsConfidence`.
 - **Correção não muda o motivo.** O `PATCH` recalcula regras e score, mas `reason` continua sendo o motivo pelo qual o documento foi para revisão.
 - **Correções gravadas na decisão.** `reviews.corrections` é calculado ao aprovar ou rejeitar, comparando o valor extraído com o atual, só para campos que um revisor alterou. Formato: `{"total": {"from": "283.80", "to": "271.30"}}`.
-- **`finishedAt` é o fim do pipeline.** Não muda quando o revisor decide; `durationMs` continua medindo o processamento automático.
+- **O revisor dá a palavra final.** Documento aprovado automaticamente recebe `finishedAt` na decisão. Documento enviado para revisão fica com `finishedAt` nulo e só o recebe quando o revisor aprova ou rejeita; até lá `durationMs` continua contando.
+- **Mensagens de erro em português.** O campo `message` do erro é escrito para quem usa a tela. Há tratamento para corpo ilegível ou valor fora da lista (400), identificador que não é UUID (400), correção vazia (400), ação de revisão em documento que não está em revisão (409), reprocessar documento fora da DLQ (409), banco indisponível (503) e falha inesperada (500, com a causa só no log). As mensagens de login são do template e seguem em inglês.
 - **`GET /api/v1/configuracao`** entrou nesta fase, por expor o limiar.
 
 ## Upload e idempotência

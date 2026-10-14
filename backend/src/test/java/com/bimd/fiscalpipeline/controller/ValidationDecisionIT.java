@@ -95,9 +95,12 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
 
         Document document = awaitStatus(documentId, DocumentStatus.PENDING_REVIEW);
         String reason = "Validação falhou: Soma dos itens = total";
+        // Not finished yet: the reviewer has the final word.
+        assertThat(document.getFinishedAt()).isNull();
         fetch(documentId, token)
                 .andExpect(jsonPath("$.outcome").value("review"))
                 .andExpect(jsonPath("$.review").doesNotExist())
+                .andExpect(jsonPath("$.finishedAt").doesNotExist())
                 .andExpect(jsonPath("$.stage.label").value("Em revisão"))
                 .andExpect(jsonPath("$.reason").value(reason))
                 .andExpect(jsonPath("$.total").value("283.80"))
@@ -125,6 +128,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.outcome").value("review"))
                 .andExpect(jsonPath("$.review").value("approved"))
+                .andExpect(jsonPath("$.finishedAt").isNotEmpty())
                 .andExpect(jsonPath("$.stage.label").value("Aprovado (revisão)"));
         Review review = reviewRepository.findByDocumentId(documentId).getFirst();
         assertThat(review.getDecision()).isEqualTo(ReviewDecision.APPROVED);
@@ -135,10 +139,15 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
                 .endsWith("revisão humana · documento.aprovado publicado");
 
         // A decided document accepts neither a second decision nor a correction.
-        decide(documentId, token, "aprovar").andExpect(status().isConflict());
+        String finishedAt = documentRepository.findById(documentId).orElseThrow().getFinishedAt();
+        String notInReview = "O documento %s não está em revisão (status atual: APPROVED)".formatted(document.getCode());
+        decide(documentId, token, "aprovar")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(notInReview));
         decide(documentId, token, "rejeitar").andExpect(status().isConflict());
         correct(documentId, token, "{\"total\":\"1.00\"}").andExpect(status().isConflict());
         assertThat(reviewRepository.findByDocumentId(documentId)).hasSize(1);
+        assertThat(documentRepository.findById(documentId).orElseThrow().getFinishedAt()).isEqualTo(finishedAt);
     }
 
     @Test
@@ -166,6 +175,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"))
                 .andExpect(jsonPath("$.review").value("rejected"))
+                .andExpect(jsonPath("$.finishedAt").isNotEmpty())
                 .andExpect(jsonPath("$.stage.label").value("Rejeitado"));
         Review review = reviewRepository.findByDocumentId(documentId).getFirst();
         assertThat(review.getDecision()).isEqualTo(ReviewDecision.REJECTED);
@@ -246,10 +256,20 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
         UUID documentId = extract(token, worker().examplePayload());
         awaitStatus(documentId, DocumentStatus.PENDING_REVIEW);
 
-        correct(documentId, token, "{\"total\":\"271,30\"}").andExpect(status().isBadRequest());
+        correct(documentId, token, "{\"total\":\"271,30\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("total: deve ser um valor com ponto e duas casas decimais, como 283.80"));
         correct(documentId, token, "{\"total\":\"271.3\"}").andExpect(status().isBadRequest());
-        correct(documentId, token, "{\"cnpj\":\"" + "1".repeat(19) + "\"}").andExpect(status().isBadRequest());
-        correct(documentId, token, "{}").andExpect(status().isBadRequest());
+        correct(documentId, token, "{\"cnpj\":\"" + "1".repeat(19) + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("cnpj: deve ter de 1 a 18 caracteres"));
+        correct(documentId, token, "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Informe o CNPJ, o total ou os dois para corrigir"));
+        correct(documentId, token, "isto não é json")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("O corpo da requisição é inválido ou tem um valor não aceito"));
 
         fetch(documentId, token).andExpect(jsonPath("$.total").value("283.80"));
     }
@@ -266,7 +286,15 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
             decide(documentId, token, "aprovar").andExpect(status().isConflict());
             decide(documentId, token, "rejeitar").andExpect(status().isConflict());
         }
-        decide(UUID.randomUUID(), token, "aprovar").andExpect(status().isNotFound());
+        UUID unknown = UUID.randomUUID();
+        decide(unknown, token, "aprovar")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Documento %s não encontrado".formatted(unknown)));
+        mockMvc.perform(post(DOCUMENTS_URL + "/nao-e-uuid/aprovar").header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Valor inválido para 'id'"));
+        mockMvc.perform(get("/api/v1/rota-que-nao-existe").header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isNotFound());
         assertThat(reviewRepository.findByDocumentId(approved)).isEmpty();
     }
 

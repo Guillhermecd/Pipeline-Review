@@ -101,14 +101,14 @@ public class DocumentService {
 
     private void validate(DocumentUpload upload) {
         if (upload.content().length == 0) {
-            throw new InvalidDocumentFileException("File is empty");
+            throw new InvalidDocumentFileException("O arquivo está vazio");
         }
         if (upload.fileName() == null || upload.fileName().isBlank()) {
-            throw new InvalidDocumentFileException("File name is required");
+            throw new InvalidDocumentFileException("O nome do arquivo é obrigatório");
         }
         if (upload.fileName().length() > MAX_FILE_NAME_LENGTH) {
             throw new InvalidDocumentFileException(
-                    "File name exceeds %d characters".formatted(MAX_FILE_NAME_LENGTH));
+                    "O nome do arquivo excede %d caracteres".formatted(MAX_FILE_NAME_LENGTH));
         }
         if (upload.content().length > properties.uploadMaxSizeBytes()) {
             throw new DocumentTooLargeException(properties.uploadMaxSizeMb());
