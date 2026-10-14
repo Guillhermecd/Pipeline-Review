@@ -1,23 +1,17 @@
 package com.bimd.fiscalpipeline.service.document;
 
-import com.bimd.fiscalpipeline.config.PipelineProperties;
 import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
-import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
 import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
-import com.bimd.fiscalpipeline.domain.model.OutboxEvent;
-import com.bimd.fiscalpipeline.messaging.EventEnvelope;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
-import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
+import com.bimd.fiscalpipeline.service.broker.BrokerService;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
+import com.bimd.fiscalpipeline.service.outbox.OutboxWriter;
 import com.bimd.fiscalpipeline.util.IsoDates;
 import com.bimd.fiscalpipeline.util.TraceIds;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,15 +27,11 @@ public class DocumentRegistrar {
 
     private static final String CODE_PREFIX = "DOC-";
     private static final String UPLOAD_SPAN_NAME = "POST /api/v1/documentos";
-    private static final int FIRST_ATTEMPT = 1;
-    private static final TypeReference<Map<String, Object>> JSON_OBJECT = new TypeReference<>() {
-    };
 
     private final DocumentRepository documentRepository;
-    private final OutboxEventRepository outboxEventRepository;
+    private final OutboxWriter outboxWriter;
     private final PipelineEventPublisher eventPublisher;
-    private final PipelineProperties properties;
-    private final ObjectMapper objectMapper;
+    private final BrokerService brokerService;
     private final Clock clock;
 
     @Transactional
@@ -49,7 +39,7 @@ public class DocumentRegistrar {
         String now = IsoDates.format(clock.instant());
         Document document = documentRepository.saveAndFlush(
                 newDocument(userId, upload, idempotencyKey, fileKey, now));
-        outboxEventRepository.save(receivedEvent(document, now));
+        outboxWriter.enqueueReceived(document, now);
         eventPublisher.publish(ServiceName.API, document.getCode(), UPLOAD_SPAN_NAME, EventLevel.OK);
         return document;
     }
@@ -64,7 +54,8 @@ public class DocumentRegistrar {
         document.setFileKey(fileKey);
         document.setMimeType(upload.mimeType());
         document.setIdempotencyKey(idempotencyKey);
-        document.setBroker(properties.brokerDefault());
+        // The broker active now is recorded on the document and used for its whole cycle.
+        document.setBroker(brokerService.active());
         document.setStatus(DocumentStatus.RECEIVED);
         document.setTraceId(TraceIds.newTraceId());
         document.setCurrentRequestId(UUID.randomUUID());
@@ -73,37 +64,5 @@ public class DocumentRegistrar {
         document.setCreatedAt(now);
         document.setUpdatedAt(now);
         return document;
-    }
-
-    private OutboxEvent receivedEvent(Document document, String now) {
-        BrokerKind broker = document.getBroker();
-        UUID eventId = UUID.randomUUID();
-        EventEnvelope envelope = new EventEnvelope(
-                eventId,
-                EventEnvelope.DOCUMENT_RECEIVED,
-                EventEnvelope.SCHEMA_VERSION,
-                document.getId(),
-                document.getCode(),
-                document.getIdempotencyKey(),
-                document.getCurrentRequestId(),
-                FIRST_ATTEMPT,
-                broker,
-                now,
-                Map.of(
-                        "fileKey", document.getFileKey(),
-                        "mimeType", document.getMimeType(),
-                        "fileName", document.getFileName()));
-
-        OutboxEvent event = new OutboxEvent();
-        event.setId(eventId);
-        event.setDocumentId(document.getId());
-        event.setEventType(envelope.eventType());
-        event.setBroker(broker);
-        event.setDestination(broker.getInputQueue());
-        event.setPayload(objectMapper.convertValue(envelope, JSON_OBJECT));
-        // The relay publishes outside the request; this keeps its span under the upload's trace.
-        event.setTraceparent(TraceIds.traceparent(document.getTraceId(), TraceIds.newSpanId()));
-        event.setCreatedAt(now);
-        return event;
     }
 }
