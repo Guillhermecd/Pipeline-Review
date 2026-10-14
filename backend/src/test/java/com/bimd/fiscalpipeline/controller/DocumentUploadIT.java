@@ -16,6 +16,9 @@ import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
 import com.bimd.fiscalpipeline.repository.PipelineEventRepository;
 import com.bimd.fiscalpipeline.support.AbstractIntegrationTest;
+import com.bimd.fiscalpipeline.support.FakeWorker.Received;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Map;
 import com.bimd.fiscalpipeline.util.Sha256;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
@@ -33,10 +36,10 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 class DocumentUploadIT extends AbstractIntegrationTest {
 
-    private static final String DOCUMENTS_URL = "/api/v1/documentos";
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
+    };
 
-    @Autowired
-    private DocumentRepository documentRepository;
+
 
     @Autowired
     private OutboxEventRepository outboxEventRepository;
@@ -80,8 +83,8 @@ class DocumentUploadIT extends AbstractIntegrationTest {
         JsonNode response = objectMapper.readTree(body);
         UUID documentId = UUID.fromString(response.get("id").asText());
 
-        Document document = documentRepository.findById(documentId).orElseThrow();
-        assertThat(document.getStatus()).isEqualTo(DocumentStatus.RECEIVED);
+        // The relay takes the message from the outbox to the input topic and the document to QUEUED.
+        Document document = awaitStatus(documentId, DocumentStatus.QUEUED);
         assertThat(document.getIdempotencyKey()).isEqualTo(expectedKey);
         assertThat(document.getBroker()).isEqualTo(BrokerKind.KAFKA);
 
@@ -90,7 +93,10 @@ class DocumentUploadIT extends AbstractIntegrationTest {
         OutboxEvent event = outbox.getFirst();
         assertThat(event.getEventType()).isEqualTo("documento.recebido");
         assertThat(event.getDestination()).isEqualTo("documentos.recebidos");
-        assertThat(event.getPublishedAt()).isNull();
+        assertThat(event.getPublishedAt()).isNotNull();
+        Received queued = worker().awaitInput(BrokerKind.KAFKA, documentId, document.getCurrentRequestId());
+        assertThat(objectMapper.convertValue(queued.envelope(), MAP_TYPE)).isEqualTo(event.getPayload());
+        assertThat(queued.headers()).containsEntry("traceparent", event.getTraceparent());
         assertThat(event.getTraceparent()).matches("00-" + document.getTraceId() + "-[0-9a-f]{16}-01");
         assertThat(event.getPayload())
                 .containsEntry("eventId", event.getId().toString())
@@ -113,10 +119,11 @@ class DocumentUploadIT extends AbstractIntegrationTest {
 
         List<PipelineEventRecord> events =
                 pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode());
-        assertThat(events).singleElement().satisfies(logged -> {
-            assertThat(logged.getMessage()).isEqualTo("POST /api/v1/documentos");
-            assertThat(logged.getLevel()).isEqualTo(EventLevel.OK);
-        });
+        assertThat(events)
+                .extracting(PipelineEventRecord::getMessage, PipelineEventRecord::getLevel)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("POST /api/v1/documentos", EventLevel.OK),
+                        org.assertj.core.groups.Tuple.tuple("publish documentos.recebidos", EventLevel.OK));
     }
 
     @Test
@@ -176,7 +183,4 @@ class DocumentUploadIT extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private byte[] uniqueContent() {
-        return ("%PDF-1.4 " + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-    }
 }

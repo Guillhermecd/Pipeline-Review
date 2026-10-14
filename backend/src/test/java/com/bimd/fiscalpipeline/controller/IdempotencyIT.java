@@ -5,7 +5,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.awaitility.Awaitility.await;
+
+import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
+import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
+import com.bimd.fiscalpipeline.repository.ExtractionRepository;
+import com.bimd.fiscalpipeline.repository.ProcessedEventRepository;
+import com.bimd.fiscalpipeline.support.FakeWorker.Received;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.time.Duration;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import com.bimd.fiscalpipeline.domain.model.PipelineEventRecord;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
@@ -31,11 +42,15 @@ import org.springframework.mock.web.MockMultipartFile;
 
 class IdempotencyIT extends AbstractIntegrationTest {
 
-    private static final String DOCUMENTS_URL = "/api/v1/documentos";
     private static final int CONCURRENT_UPLOADS = 6;
+    private static final Duration QUIET = Duration.ofSeconds(2);
 
     @Autowired
-    private DocumentRepository documentRepository;
+    private ExtractionRepository extractionRepository;
+
+    @Autowired
+    private ProcessedEventRepository processedEventRepository;
+
 
     @Autowired
     private OutboxEventRepository outboxEventRepository;
@@ -74,7 +89,9 @@ class IdempotencyIT extends AbstractIntegrationTest {
         assertThat(outboxEventRepository.findByDocumentId(documentId)).hasSize(1);
 
         // The duplicate is logged against no document ("—"), the accepted upload against its code.
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(code)).hasSize(1);
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(code))
+                .filteredOn(event -> event.getMessage().equals("POST /api/v1/documentos"))
+                .hasSize(1);
         List<PipelineEventRecord> duplicates = pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc("—");
         assertThat(duplicates)
                 .filteredOn(event -> event.getMessage()
@@ -99,6 +116,33 @@ class IdempotencyIT extends AbstractIntegrationTest {
                 .getContentAsString());
 
         assertThat(secondCode).isNotEqualTo(firstCode);
+    }
+
+    /**
+     * Delivery is at least once on every hop: the broker may hand the same result over again, and
+     * a relay that died after publishing makes the worker answer the same request twice.
+     */
+    @ParameterizedTest
+    @EnumSource(BrokerKind.class)
+    void should_storeOneExtraction_when_resultIsDeliveredMoreThanOnce(BrokerKind broker) throws Exception {
+        brokerService.switchTo(broker);
+        UUID documentId = uploadNewDocument(bearerToken());
+        UUID requestId = documentRepository.findById(documentId).orElseThrow().getCurrentRequestId();
+        Received input = worker().awaitInput(broker, documentId, requestId);
+
+        ObjectNode result = worker().extracted(input, 1);
+        awaitStatus(documentId, DocumentStatus.EXTRACTED);
+        // The same message again, then a second answer to the same request.
+        worker().resend(input, result);
+        worker().extracted(input, 1);
+
+        await().during(QUIET)
+                .atMost(PIPELINE_TIMEOUT)
+                .until(() -> extractionRepository.findByDocumentId(documentId).size() == 1);
+        assertThat(documentRepository.findById(documentId).orElseThrow().getStatus())
+                .isEqualTo(DocumentStatus.EXTRACTED);
+        assertThat(processedEventRepository.existsById(UUID.fromString(result.get("eventId").asText())))
+                .isTrue();
     }
 
     /** The pre-check alone cannot stop a race; the UNIQUE constraint has to. */
@@ -151,7 +195,4 @@ class IdempotencyIT extends AbstractIntegrationTest {
         return objectMapper.readTree(body).get("code").asText();
     }
 
-    private byte[] uniqueContent() {
-        return ("%PDF-1.4 " + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-    }
 }

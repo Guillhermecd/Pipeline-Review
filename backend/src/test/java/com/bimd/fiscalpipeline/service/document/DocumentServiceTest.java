@@ -54,6 +54,9 @@ class DocumentServiceTest {
     private DocumentRegistrar documentRegistrar;
 
     @Mock
+    private ReprocessService reprocessService;
+
+    @Mock
     private StorageService storageService;
 
     @Mock
@@ -66,10 +69,18 @@ class DocumentServiceTest {
 
     @BeforeEach
     void setUp() {
-        PipelineProperties properties = new PipelineProperties(1, BrokerKind.KAFKA, new BigDecimal("0.85"));
+        PipelineProperties properties =
+                new PipelineProperties(1, BrokerKind.KAFKA, new BigDecimal("0.85"), 500, 10_000);
         Clock clock = Clock.fixed(Instant.parse("2026-10-13T13:20:00Z"), ZoneOffset.UTC);
         service = new DocumentService(
-                documentRepository, documentRegistrar, storageService, eventPublisher, documentMapper, properties, clock);
+                documentRepository,
+                documentRegistrar,
+                reprocessService,
+                storageService,
+                eventPublisher,
+                documentMapper,
+                properties,
+                clock);
     }
 
     @Test

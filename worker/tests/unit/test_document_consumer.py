@@ -142,20 +142,62 @@ async def test_poison_message_goes_to_the_dead_letter_queue_untouched(body: byte
     assert harness.llm.received_text == []
 
 
-async def test_transient_failure_is_dead_lettered_with_its_class() -> None:
+@pytest.mark.parametrize(("attempt", "delay_ms"), [(1, 1000), (2, 2000), (3, 4000)])
+async def test_transient_failure_is_parked_for_a_retry_with_backoff(attempt: int, delay_ms: int) -> None:
     harness = Harness(llm=FakeLlm(error=TransientError("LLM 503 Service Unavailable")))
-    envelope = {**received_envelope(), "attempt": 3}
+    envelope = {**received_envelope(), "attempt": attempt}
+
+    await harness.deliver(envelope)
+
+    assert [role for role, _ in harness.kafka.published] == [QueueRole.PROGRESS] * 3
+    waiting = harness.kafka.bodies(QueueRole.PROGRESS)[-1]
+    Draft202012Validator(load_schema("documento-progresso.payload.schema.json")).validate(waiting["payload"])
+    assert waiting["payload"] == {
+        "stage": "RETRY_WAIT",
+        "attempt": attempt,
+        "error": "LLM 503 Service Unavailable",
+        "retryInMs": delay_ms,
+    }
+
+    assert len(harness.kafka.retries) == 1
+    parked_delay, message = harness.kafka.retries[0]
+    retry = json.loads(message.body)
+    Draft202012Validator(load_schema("envelope.schema.json")).validate(retry)
+    assert parked_delay == delay_ms
+    assert retry["eventType"] == "documento.retry"
+    assert retry["attempt"] == attempt + 1
+    assert retry["eventId"] != envelope["eventId"]
+    for key in ("documentId", "documentCode", "idempotencyKey", "requestId", "broker", "payload"):
+        assert retry[key] == envelope[key]
+    assert message.headers == {"traceparent": TRACEPARENT}
+    assert message.key == envelope["documentId"]
+
+
+async def test_fourth_transient_failure_goes_to_the_dead_letter_queue() -> None:
+    harness = Harness(llm=FakeLlm(error=TransientError("LLM 503 Service Unavailable")))
+    envelope = {**received_envelope(), "eventType": "documento.retry", "attempt": 4}
 
     await harness.deliver(envelope)
 
     roles = [role for role, _ in harness.kafka.published]
     assert roles == [QueueRole.PROGRESS, QueueRole.PROGRESS, QueueRole.DEAD_LETTER]
+    assert harness.kafka.retries == []
     _, message = harness.kafka.published[-1]
     assert json.loads(message.body) == envelope
     assert message.headers["x-error"] == "LLM 503 Service Unavailable"
     assert message.headers["x-error-class"] == "TransientError"
-    assert message.headers["x-attempts"] == "3"
+    assert message.headers["x-attempts"] == "4"
     assert message.key == envelope["documentId"]
+
+
+async def test_retry_goes_to_the_broker_the_message_came_from() -> None:
+    harness = Harness(llm=FakeLlm(error=TransientError("429 rate limit excedido")))
+
+    await harness.deliver(received_envelope(BrokerKind.RABBITMQ), broker=BrokerKind.RABBITMQ)
+
+    assert len(harness.rabbit.retries) == 1
+    assert harness.kafka.retries == []
+    assert harness.kafka.published == []
 
 
 async def test_permanent_failure_is_dead_lettered_before_calling_the_llm() -> None:
@@ -165,17 +207,19 @@ async def test_permanent_failure_is_dead_lettered_before_calling_the_llm() -> No
 
     _, message = harness.kafka.published[-1]
     assert [role for role, _ in harness.kafka.published] == [QueueRole.PROGRESS, QueueRole.DEAD_LETTER]
+    assert harness.kafka.retries == []
     assert message.headers["x-error-class"] == "PermanentError"
     assert message.headers["x-error"] == "arquivo corrompido: PDF ilegível"
     assert harness.llm.received_text == []
 
 
-async def test_storage_failure_is_dead_lettered_as_transient() -> None:
+async def test_storage_failure_is_retried_as_transient() -> None:
     harness = Harness(files=FakeFileStore(error=TransientError("MinIO indisponível")))
 
     await harness.deliver(received_envelope())
 
-    assert harness.kafka.published[-1][1].headers["x-error-class"] == "TransientError"
+    assert harness.kafka.bodies(QueueRole.PROGRESS)[-1]["payload"]["error"] == "MinIO indisponível"
+    assert len(harness.kafka.retries) == 1
 
 
 async def test_unexpected_error_is_dead_lettered_instead_of_looping() -> None:
@@ -184,6 +228,7 @@ async def test_unexpected_error_is_dead_lettered_instead_of_looping() -> None:
     await harness.deliver(received_envelope())
 
     _, message = harness.kafka.published[-1]
+    assert harness.kafka.retries == []
     assert message.headers["x-error"] == "erro inesperado no worker: ZeroDivisionError"
     assert message.headers["x-error-class"] == "PermanentError"
 

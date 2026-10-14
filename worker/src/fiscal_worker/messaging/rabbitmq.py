@@ -54,6 +54,13 @@ class RabbitMqBroker:
             await self._connection.close()
 
     async def publish(self, role: QueueRole, message: OutgoingMessage) -> None:
+        await self._send(RABBIT_QUEUES[role], message)
+
+    async def publish_retry(self, message: OutgoingMessage, delay_ms: int) -> None:
+        # The queue's TTL does the waiting; its dead-letter exchange routes back to the input queue.
+        await self._send(RABBIT_RETRY_QUEUES[delay_ms], message)
+
+    async def _send(self, routing_key: str, message: OutgoingMessage) -> None:
         if self._exchange is None:
             raise RuntimeError("RabbitMqBroker.start() was not called")
         await self._exchange.publish(
@@ -63,7 +70,7 @@ class RabbitMqBroker:
                 content_type="application/json",
                 delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
             ),
-            routing_key=RABBIT_QUEUES[role],
+            routing_key=routing_key,
             mandatory=True,
         )
 

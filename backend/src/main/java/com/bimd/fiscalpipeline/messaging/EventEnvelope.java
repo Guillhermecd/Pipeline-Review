@@ -20,4 +20,6 @@ public record EventEnvelope(
 
     public static final int SCHEMA_VERSION = 1;
     public static final String DOCUMENT_RECEIVED = "documento.recebido";
+    public static final String DOCUMENT_PROGRESS = "documento.progresso";
+    public static final String DOCUMENT_EXTRACTED = "documento.extraido";
 }

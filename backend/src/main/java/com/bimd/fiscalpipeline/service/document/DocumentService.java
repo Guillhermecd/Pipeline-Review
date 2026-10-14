@@ -41,6 +41,7 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final DocumentRegistrar documentRegistrar;
+    private final ReprocessService reprocessService;
     private final StorageService storageService;
     private final PipelineEventPublisher eventPublisher;
     private final DocumentMapper documentMapper;
@@ -84,6 +85,10 @@ public class DocumentService {
         return documentRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
+    }
+
+    public DocumentResponse reprocess(UUID id) {
+        return toResponse(reprocessService.reprocess(id));
     }
 
     private void validate(DocumentUpload upload) {

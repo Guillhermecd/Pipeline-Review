@@ -46,4 +46,9 @@ public class DocumentController {
     public DocumentResponse getById(@PathVariable UUID id) {
         return documentService.getById(id);
     }
+
+    @PostMapping("/{id}/reprocessar")
+    public ResponseEntity<DocumentResponse> reprocess(@PathVariable UUID id) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(documentService.reprocess(id));
+    }
 }

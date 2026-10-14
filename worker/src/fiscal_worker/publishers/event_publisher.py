@@ -49,6 +49,32 @@ class EventPublisher:
             payload.model_dump(mode="json", by_alias=True),
         )
 
+    async def retry_wait(
+        self, source: EventEnvelope, incoming: IncomingMessage, error: ExtractionError, delay_ms: int
+    ) -> None:
+        payload = ProgressPayload(
+            stage=Stage.RETRY_WAIT, attempt=source.attempt, error=str(error), retry_in_ms=delay_ms
+        )
+        await self._send(
+            QueueRole.PROGRESS,
+            EventType.DOCUMENT_PROGRESS,
+            source,
+            incoming,
+            payload.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+
+    async def retry(self, source: EventEnvelope, incoming: IncomingMessage, delay_ms: int) -> None:
+        """Same document and requestId, next attempt: it comes back on the input queue after the wait."""
+        envelope = source.model_copy(
+            update={
+                "event_id": uuid4(),
+                "event_type": EventType.DOCUMENT_RETRY,
+                "attempt": source.attempt + 1,
+                "occurred_at": iso_now(),
+            }
+        )
+        await self._brokers[incoming.broker].publish_retry(self._message(envelope, incoming), delay_ms)
+
     async def dead_letter(
         self, incoming: IncomingMessage, error: ExtractionError, attempts: int, document_key: str | None
     ) -> None:
@@ -81,12 +107,16 @@ class EventPublisher:
                 "payload": payload,
             }
         )
+        await self._brokers[incoming.broker].publish(role, self._message(envelope, incoming))
+
+    @staticmethod
+    def _message(envelope: EventEnvelope, incoming: IncomingMessage) -> OutgoingMessage:
+        """Only the trace context is carried over; broker bookkeeping headers stay behind."""
         headers = {}
         if TRACEPARENT_HEADER in incoming.headers:
             headers[TRACEPARENT_HEADER] = incoming.headers[TRACEPARENT_HEADER]
-        message = OutgoingMessage(
-            key=str(source.document_id),
+        return OutgoingMessage(
+            key=str(envelope.document_id),
             body=envelope.model_dump_json(by_alias=True).encode(),
             headers=headers,
         )
-        await self._brokers[incoming.broker].publish(role, message)

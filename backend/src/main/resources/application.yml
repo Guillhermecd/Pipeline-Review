@@ -24,6 +24,33 @@ spring:
     multipart:
       max-file-size: ${UPLOAD_MAX_SIZE_MB:10}MB
       max-request-size: ${UPLOAD_MAX_SIZE_MB:10}MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: fiscal-api
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      # O offset só avança depois que a mudança de estado foi gravada.
+      ack-mode: record
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5673}
+    # O relay do outbox só marca a linha como publicada depois do confirm do broker.
+    publisher-confirm-type: simple
+    listener:
+      simple:
+        prefetch: 10
+        retry:
+          enabled: true
+          max-attempts: 5
+          initial-interval: 1s
+          multiplier: 2
   mail:
     host: ${SMTP_HOST:127.0.0.1}
     port: ${SMTP_PORT:1035}
@@ -57,4 +84,6 @@ app:
   pipeline:
     upload-max-size-mb: ${UPLOAD_MAX_SIZE_MB:10}
     broker-default: ${BROKER_DEFAULT:kafka}
+    outbox-poll-ms: ${OUTBOX_POLL_MS:500}
+    publish-timeout-ms: ${PUBLISH_TIMEOUT_MS:10000}
     review-confidence-threshold: ${REVIEW_CONFIDENCE_THRESHOLD:0.85}

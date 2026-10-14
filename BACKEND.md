@@ -78,18 +78,20 @@ backend/src/main/java/com/bimd/fiscalpipeline/
                            # EventStreamController, SimulatorController, DemoController
   service/
     document/              # DocumentService (upload, consulta, correção, revisão, reprocessamento)
-    pipeline/              # PipelineStateService (máquina de estados), ExtractionResultService
+    pipeline/              # PipelineStateService (máquina de estados), PipelineInboundService (guarda de estado)
+    outbox/                # NOVO — OutboxWriter, OutboxPublisher, OutboxRelay (agendado)
+    broker/                # NOVO — BrokerService (broker ativo)
     validation/            # NOVO — DocumentRule (interface) + uma classe por regra
     scoring/               # NOVO — ConfidenceScorer, ReviewDecider
     trace/                 # NOVO — TraceService (consulta o Jaeger)
     event/                 # NOVO — PipelineEventPublisher (SSE + simulador), SimulatorForwarder
     demo/                  # NOVO — DemoTrafficService (perfil `demo`)
   messaging/               # NOVO — porta de entrada/saída das mensagens
-    MessagingPort.java     # interface: publish(EventEnvelope, Destination)
-    kafka/                 # KafkaMessagingAdapter + listeners
-    rabbitmq/              # RabbitMessagingAdapter + listeners + declaração de filas
-    outbox/                # OutboxRelay (agendado) + OutboxEvent
-    listener/              # ExtractionResultListener, ProgressListener, DeadLetterListener
+    MessagingPort.java     # interface: publish(destino, chave, corpo, headers), retorna após o confirm
+    Topology.java          # nomes e argumentos de filas, iguais a contracts/topology.json
+    PipelineMessageDispatcher.java  # lê o envelope e delega ao service, para os dois brokers
+    kafka/                 # KafkaMessagingAdapter + KafkaPipelineListener + tópicos
+    rabbitmq/              # RabbitMessagingAdapter + RabbitPipelineListener + declaração de filas
   repository/              # Interfaces Spring Data puras
   domain/
     model/                 # @Entity: Document, DocumentItem, Extraction, ValidationResult, Review,
@@ -112,7 +114,7 @@ backend/src/test/java/com/bimd/fiscalpipeline/
 Regras de camada do template aplicadas aqui:
 
 - **Controller:** declara a rota, valida com Bean Validation, delega ao service. Nunca devolve entidade, sempre DTO.
-- **Listener de mensagens** (`messaging/listener`): é uma porta de entrada como o controller. Recebe, converte para DTO, delega ao service. Nenhuma regra.
+- **Listener de mensagens** (`messaging/kafka`, `messaging/rabbitmq`): é uma porta de entrada como o controller. Recebe, converte para DTO, delega ao service. Nenhuma regra.
 - **Service:** dono de toda regra. Não conhece `ResponseEntity` nem detalhes de Kafka/RabbitMQ (fala com `MessagingPort`).
 - **Adapters de broker:** só traduzem `MessagingPort` para o client do broker. Trocar de broker não toca em service.
 - **Validação:** cada regra é uma classe que implementa `DocumentRule` (Open/Closed). Regra nova não altera as existentes.
@@ -186,7 +188,7 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 RABBITMQ_URL=amqp://guest:guest@localhost:5673
 
 REVIEW_CONFIDENCE_THRESHOLD=0.85
-RETRY_BACKOFF_MS=1000,2000,4000
+OUTBOX_POLL_MS=500
 
 OTEL_SERVICE_NAME=fiscal-api
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
@@ -317,7 +319,7 @@ O `traceparent` vai nos **headers** (Kafka headers / AMQP headers), não no corp
 | Situação | Kafka | RabbitMQ |
 |---|---|---|
 | Falha transitória (LLM 429/5xx, timeout, MinIO fora) | Worker publica em `documentos.recebidos-retry` com header `x-not-before`; o consumer de retry pausa a partição até o horário e republica em `documentos.recebidos` | Worker publica na fila `extracao.retry.{1s,2s,4s}` conforme a tentativa; ao expirar, a DLX devolve para `extracao.q` |
-| Backoff | 1 s, 2 s, 4 s (`RETRY_BACKOFF_MS`) | idem |
+| Backoff | 1 s, 2 s, 4 s (fixo em `contracts/topology.json`) | idem |
 | Erro permanente (PDF com senha, formato não suportado, arquivo corrompido) | Direto para `documentos.recebidos.DLT` | Direto para `extracao.dlq` |
 | 4ª falha | DLT | `extracao.dlq` |
 | Mensagem fora do schema (poison) | DLT na primeira leitura | `extracao.dlq` na primeira leitura |

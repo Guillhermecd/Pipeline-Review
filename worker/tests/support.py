@@ -92,11 +92,14 @@ class FakeLlm:
 
     extraction: LlmExtraction | None = None
     error: Exception | None = None
+    # With a number, only the first calls raise `error`; the following ones answer.
+    failures: int | None = None
     received_text: list[str] = field(default_factory=list)
 
     async def extract(self, document_text: str) -> LlmResult:
         self.received_text.append(document_text)
-        if self.error is not None:
+        still_failing = self.failures is None or len(self.received_text) <= self.failures
+        if self.error is not None and still_failing:
             raise self.error
         assert self.extraction is not None
         return LlmResult(extraction=self.extraction, model=FAKE_MODEL, input_tokens=120, output_tokens=40)
@@ -135,6 +138,7 @@ class RecordingBroker:
 
     kind: BrokerKind
     published: list[tuple[QueueRole, OutgoingMessage]] = field(default_factory=list)
+    retries: list[tuple[int, OutgoingMessage]] = field(default_factory=list)
     publish_error: Exception | None = None
 
     async def start(self) -> None: ...
@@ -145,6 +149,11 @@ class RecordingBroker:
         if self.publish_error is not None:
             raise self.publish_error
         self.published.append((role, message))
+
+    async def publish_retry(self, message: OutgoingMessage, delay_ms: int) -> None:
+        if self.publish_error is not None:
+            raise self.publish_error
+        self.retries.append((delay_ms, message))
 
     async def consume(self, handler: MessageHandler) -> None: ...
 
