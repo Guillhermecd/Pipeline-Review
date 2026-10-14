@@ -1,6 +1,8 @@
 package com.bimd.fiscalpipeline.messaging;
 
+import com.bimd.fiscalpipeline.domain.dto.PipelineStream;
 import com.bimd.fiscalpipeline.domain.enums.PipelineNode;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.service.pipeline.PipelineInboundService;
 import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -10,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,9 +32,11 @@ public class PipelineMessageDispatcher {
     private final PipelineInboundService inboundService;
     private final ObjectMapper objectMapper;
     private final PipelineTracer tracer;
+    private final ApplicationEventPublisher applicationEvents;
 
-    public void progress(String body) {
+    public void progress(String body, Map<String, String> headers) {
         read(body, EventEnvelope.DOCUMENT_PROGRESS).ifPresent(envelope -> {
+            announce(envelope, headers);
             ProgressPayload payload;
             try {
                 payload = objectMapper.convertValue(envelope.payload(), ProgressPayload.class);
@@ -50,6 +55,7 @@ public class PipelineMessageDispatcher {
     /** Continues the trace the worker sent along, so validation shows up in the document trace. */
     public void extracted(String body, Map<String, String> headers) {
         read(body, EventEnvelope.DOCUMENT_EXTRACTED).ifPresent(envelope -> {
+            announce(envelope, headers);
             try (Scope ignored = tracer.continueFrom(headers.get(Topology.TRACEPARENT_HEADER))) {
                 tracer.inSpan(
                         "consume " + envelope.broker().getOutputQueue(),
@@ -63,9 +69,21 @@ public class PipelineMessageDispatcher {
 
     /** The body is the input message as the worker received it; the reason comes in the headers. */
     public void deadLetter(String body, Map<String, String> headers) {
-        read(body, null)
-                .ifPresent(envelope -> inboundService.onDeadLetter(
-                        envelope, headers.get(Topology.ERROR_HEADER), attempts(headers)));
+        read(body, null).ifPresent(envelope -> {
+            announce(envelope, headers);
+            inboundService.onDeadLetter(envelope, headers.get(Topology.ERROR_HEADER), attempts(headers));
+        });
+    }
+
+    /** Feeds the "Último envelope" card with what the API has just consumed. */
+    private void announce(EventEnvelope envelope, Map<String, String> headers) {
+        applicationEvents.publishEvent(new PipelineChange.EnvelopeSeen(new PipelineStream.Envelope(
+                envelope.eventType(),
+                envelope.documentId(),
+                envelope.idempotencyKey(),
+                envelope.attempt(),
+                headers.getOrDefault(Topology.TRACEPARENT_HEADER, ""),
+                envelope.broker())));
     }
 
     private Optional<EventEnvelope> read(String body, String expectedType) {

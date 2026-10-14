@@ -1,0 +1,1330 @@
+{
+  "data": [
+    {
+      "traceID": "8839e77a756402f89166050d04edab22",
+      "spans": [
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "ec88a254bb87ec6b",
+          "operationName": "ocr.pdf_text",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "99c8974d4108fde3"
+            }
+          ],
+          "startTime": 1791943493549795,
+          "duration": 56584,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "ac3d442eecc4223d",
+          "operationName": "INSERT documento ON CONFLICT (idempotency_key)",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "3710acde9402707d"
+            }
+          ],
+          "startTime": 1791943462060014,
+          "duration": 64928,
+          "tags": [
+            {
+              "key": "db.system",
+              "type": "string",
+              "value": "postgresql"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "api"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Recebido"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 71
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "http-nio-1337-exec-3"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "55408a77b9ae5b0f",
+          "operationName": "llm.extract → LLM 504 DEADLINE_EXCEEDED",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "6e54a4b8dc9cef21"
+            }
+          ],
+          "startTime": 1791943462829911,
+          "duration": 29702379,
+          "tags": [
+            {
+              "key": "error",
+              "type": "bool",
+              "value": true
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "otel.status_code",
+              "type": "string",
+              "value": "ERROR"
+            },
+            {
+              "key": "otel.status_description",
+              "type": "string",
+              "value": "TransientError: LLM 504 DEADLINE_EXCEEDED"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Extração"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "277c33df68e3444b",
+          "operationName": "consume documentos.recebidos · tentativa 3",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "99c8974d4108fde3"
+            }
+          ],
+          "startTime": 1791943522832862,
+          "duration": 22555929,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": [
+            "clock skew adjustment disabled; not applying calculated delta of -26.92670485s"
+          ]
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "99c8974d4108fde3",
+          "operationName": "consume documentos.recebidos · tentativa 2",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "6e54a4b8dc9cef21"
+            }
+          ],
+          "startTime": 1791943493548240,
+          "duration": 27271764,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": [
+            "clock skew adjustment disabled; not applying calculated delta of -29.54963795s"
+          ]
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "0ce360e51b83ecd8",
+          "operationName": "score.confianca",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "c47468f12ff51d4b"
+            }
+          ],
+          "startTime": 1791943545465904,
+          "duration": 420,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "validation"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Score"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 88
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#1-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "0d0d89b3dfa8cb6a",
+          "operationName": "ocr.pdf_text",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "277c33df68e3444b"
+            }
+          ],
+          "startTime": 1791943522834556,
+          "duration": 55375,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "662cb85677466ffe",
+          "operationName": "retry +1s → documentos.recebidos-retry",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "6e54a4b8dc9cef21"
+            }
+          ],
+          "startTime": 1791943492535000,
+          "duration": 1013240,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "messaging.system",
+              "type": "string",
+              "value": "kafka"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "retry"
+            },
+            {
+              "key": "pipeline.span.status",
+              "type": "string",
+              "value": "wait"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Retry 1/3"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": [
+            "clock skew adjustment disabled; not applying calculated delta of -15.407135732s"
+          ]
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "c036c3d0c3609092",
+          "operationName": "ocr.pdf_text",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "6e54a4b8dc9cef21"
+            }
+          ],
+          "startTime": 1791943462733480,
+          "duration": 92755,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "ede6f33328cd07a4",
+          "operationName": "publish documentos.recebidos",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "3710acde9402707d"
+            }
+          ],
+          "startTime": 1791943462617613,
+          "duration": 115634,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "messaging.system",
+              "type": "string",
+              "value": "broker"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "broker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Na fila"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 98
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "scheduling-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": [
+            "clock skew adjustment disabled; not applying calculated delta of -619.25655ms"
+          ]
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "620a41825d3be089",
+          "operationName": "publish documentos.extraidos",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "277c33df68e3444b"
+            }
+          ],
+          "startTime": 1791943545381672,
+          "duration": 7119,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "messaging.system",
+              "type": "string",
+              "value": "kafka"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "broker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Validação"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "c47468f12ff51d4b",
+          "operationName": "consume documentos.extraidos",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "620a41825d3be089"
+            }
+          ],
+          "startTime": 1791943545393557,
+          "duration": 87714,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "validation"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Validação"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 88
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#1-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "0004b806768c4bc0",
+          "operationName": "retry +2s → documentos.recebidos-retry",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "99c8974d4108fde3"
+            }
+          ],
+          "startTime": 1791943520816000,
+          "duration": 2016862,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "messaging.system",
+              "type": "string",
+              "value": "kafka"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "retry"
+            },
+            {
+              "key": "pipeline.span.status",
+              "type": "string",
+              "value": "wait"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Retry 2/3"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": [
+            "clock skew adjustment disabled; not applying calculated delta of -14.6403089s"
+          ]
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "b324f5d0949219de",
+          "operationName": "UPDATE documento SET status",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "c47468f12ff51d4b"
+            }
+          ],
+          "startTime": 1791943545469561,
+          "duration": 70,
+          "tags": [
+            {
+              "key": "db.system",
+              "type": "string",
+              "value": "postgresql"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "validation"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Score"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 88
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#1-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "3710acde9402707d",
+          "operationName": "POST /api/v1/documentos",
+          "references": [],
+          "startTime": 1791943461898168,
+          "duration": 316012,
+          "tags": [
+            {
+              "key": "client.address",
+              "type": "string",
+              "value": "0:0:0:0:0:0:0:1"
+            },
+            {
+              "key": "http.request.method",
+              "type": "string",
+              "value": "POST"
+            },
+            {
+              "key": "http.response.status_code",
+              "type": "int64",
+              "value": 202
+            },
+            {
+              "key": "http.route",
+              "type": "string",
+              "value": "/api/v1/documentos"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "network.peer.address",
+              "type": "string",
+              "value": "0:0:0:0:0:0:0:1"
+            },
+            {
+              "key": "network.peer.port",
+              "type": "int64",
+              "value": 65323
+            },
+            {
+              "key": "network.protocol.version",
+              "type": "string",
+              "value": "1.1"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "io.opentelemetry.tomcat-10.0"
+            },
+            {
+              "key": "otel.scope.version",
+              "type": "string",
+              "value": "2.32.0-alpha"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "api"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Recebido"
+            },
+            {
+              "key": "server.address",
+              "type": "string",
+              "value": "localhost"
+            },
+            {
+              "key": "server.port",
+              "type": "int64",
+              "value": 1337
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "server"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 71
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "http-nio-1337-exec-3"
+            },
+            {
+              "key": "url.path",
+              "type": "string",
+              "value": "/api/v1/documentos"
+            },
+            {
+              "key": "url.scheme",
+              "type": "string",
+              "value": "http"
+            },
+            {
+              "key": "user_agent.original",
+              "type": "string",
+              "value": "python-httpx/0.28.1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "7a0a3c413cd69844",
+          "operationName": "llm.extract (json schema)",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "277c33df68e3444b"
+            }
+          ],
+          "startTime": 1791943522892459,
+          "duration": 22488207,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Extração"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "ce5d8505110ae76c",
+          "operationName": "llm.extract → LLM 504 DEADLINE_EXCEEDED",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "99c8974d4108fde3"
+            }
+          ],
+          "startTime": 1791943493608446,
+          "duration": 27204697,
+          "tags": [
+            {
+              "key": "error",
+              "type": "bool",
+              "value": true
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "otel.status_code",
+              "type": "string",
+              "value": "ERROR"
+            },
+            {
+              "key": "otel.status_description",
+              "type": "string",
+              "value": "TransientError: LLM 504 DEADLINE_EXCEEDED"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Extração"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "6e54a4b8dc9cef21",
+          "operationName": "consume documentos.recebidos",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "dfa3b07ee538a0ed"
+            }
+          ],
+          "startTime": 1791943462728631,
+          "duration": 29811705,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-worker"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "worker"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "OCR"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            }
+          ],
+          "logs": [],
+          "processID": "p2",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "d37b7f4d4fa385d0",
+          "operationName": "validate cnpj.dv + soma.itens",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "c47468f12ff51d4b"
+            }
+          ],
+          "startTime": 1791943545436243,
+          "duration": 27980,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "fiscal-pipeline"
+            },
+            {
+              "key": "pipeline.node",
+              "type": "string",
+              "value": "validation"
+            },
+            {
+              "key": "pipeline.stage",
+              "type": "string",
+              "value": "Validação"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 88
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#1-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "0136794d2a8258f6",
+          "operationName": "INSERT pipeline_fiscal.processed_events",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "bdb66e4406ec06d6"
+            }
+          ],
+          "startTime": 1791943462838972,
+          "duration": 909,
+          "tags": [
+            {
+              "key": "db.connection_string",
+              "type": "string",
+              "value": "postgresql://localhost:5442"
+            },
+            {
+              "key": "db.name",
+              "type": "string",
+              "value": "pipeline_fiscal"
+            },
+            {
+              "key": "db.operation",
+              "type": "string",
+              "value": "INSERT"
+            },
+            {
+              "key": "db.sql.table",
+              "type": "string",
+              "value": "processed_events"
+            },
+            {
+              "key": "db.statement",
+              "type": "string",
+              "value": "insert into processed_events (processed_at,event_id) values (?,?)"
+            },
+            {
+              "key": "db.system",
+              "type": "string",
+              "value": "postgresql"
+            },
+            {
+              "key": "db.user",
+              "type": "string",
+              "value": "postgres"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "io.opentelemetry.jdbc"
+            },
+            {
+              "key": "otel.scope.version",
+              "type": "string",
+              "value": "2.32.0-alpha"
+            },
+            {
+              "key": "server.address",
+              "type": "string",
+              "value": "localhost"
+            },
+            {
+              "key": "server.port",
+              "type": "int64",
+              "value": 5442
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "client"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 82
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#2-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "89947760646638f8",
+          "operationName": "PipelineEventRepository.save",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "0dc52ccc1bd1fcb1"
+            }
+          ],
+          "startTime": 1791943462801485,
+          "duration": 2435,
+          "tags": [
+            {
+              "key": "code.function",
+              "type": "string",
+              "value": "save"
+            },
+            {
+              "key": "code.namespace",
+              "type": "string",
+              "value": "com.bimd.fiscalpipeline.repository.PipelineEventRepository"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "io.opentelemetry.spring-data-1.8"
+            },
+            {
+              "key": "otel.scope.version",
+              "type": "string",
+              "value": "2.32.0-alpha"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 82
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#2-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "9ba489c1c107361d",
+          "operationName": "DocumentRepository.findByIdForUpdate",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "0dc52ccc1bd1fcb1"
+            }
+          ],
+          "startTime": 1791943462770551,
+          "duration": 4146,
+          "tags": [
+            {
+              "key": "code.function",
+              "type": "string",
+              "value": "findByIdForUpdate"
+            },
+            {
+              "key": "code.namespace",
+              "type": "string",
+              "value": "com.bimd.fiscalpipeline.repository.DocumentRepository"
+            },
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "io.opentelemetry.spring-data-1.8"
+            },
+            {
+              "key": "otel.scope.version",
+              "type": "string",
+              "value": "2.32.0-alpha"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 82
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#2-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        },
+        {
+          "traceID": "8839e77a756402f89166050d04edab22",
+          "spanID": "b2859c245f33cac4",
+          "operationName": "Session.merge com.bimd.fiscalpipeline.domain.model.PipelineEventRecord",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "8839e77a756402f89166050d04edab22",
+              "spanID": "828d0a36fa42821c"
+            }
+          ],
+          "startTime": 1791943492542705,
+          "duration": 1347,
+          "tags": [
+            {
+              "key": "internal.span.format",
+              "type": "string",
+              "value": "otlp"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "io.opentelemetry.hibernate-6.0"
+            },
+            {
+              "key": "otel.scope.version",
+              "type": "string",
+              "value": "2.32.0-alpha"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 82
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "org.springframework.kafka.KafkaListenerEndpointContainer#2-0-C-1"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": null
+        }
+      ],
+      "processes": {
+        "p1": {
+          "serviceName": "fiscal-api",
+          "tags": []
+        },
+        "p2": {
+          "serviceName": "fiscal-worker",
+          "tags": []
+        }
+      },
+      "warnings": null
+    }
+  ],
+  "total": 0,
+  "limit": 0,
+  "offset": 0,
+  "errors": null
+}

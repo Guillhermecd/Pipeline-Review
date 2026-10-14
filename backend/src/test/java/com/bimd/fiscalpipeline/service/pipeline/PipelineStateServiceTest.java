@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 class PipelineStateServiceTest {
 
     private final PipelineStateService service =
-            new PipelineStateService(Clock.fixed(Instant.parse("2026-10-13T13:20:00Z"), ZoneOffset.UTC));
+            new PipelineStateService(Clock.fixed(Instant.parse("2026-10-13T13:20:00Z"), ZoneOffset.UTC), event -> {});
 
     @ParameterizedTest
     @CsvSource({

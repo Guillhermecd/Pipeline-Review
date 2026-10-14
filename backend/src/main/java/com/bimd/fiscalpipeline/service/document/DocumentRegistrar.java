@@ -8,6 +8,7 @@ import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.service.broker.BrokerService;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.outbox.OutboxWriter;
 import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
@@ -17,6 +18,7 @@ import io.opentelemetry.api.trace.SpanContext;
 import java.time.Clock;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class DocumentRegistrar {
     private final PipelineEventPublisher eventPublisher;
     private final BrokerService brokerService;
     private final PipelineTracer tracer;
+    private final ApplicationEventPublisher applicationEvents;
     private final Clock clock;
 
     @Transactional
@@ -51,6 +54,7 @@ public class DocumentRegistrar {
                 RECEIVED_STAGE,
                 () -> documentRepository.saveAndFlush(newDocument(userId, upload, idempotencyKey, fileKey, now)));
         outboxWriter.enqueueReceived(document, now);
+        applicationEvents.publishEvent(new PipelineChange.DocumentChanged(document.getId()));
         eventPublisher.publish(ServiceName.API, document.getCode(), UPLOAD_SPAN_NAME, EventLevel.OK);
         return document;
     }

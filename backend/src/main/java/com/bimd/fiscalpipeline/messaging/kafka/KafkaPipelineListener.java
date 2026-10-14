@@ -19,7 +19,7 @@ public class KafkaPipelineListener {
 
     @KafkaListener(topics = Topology.KAFKA_PROGRESS_TOPIC, groupId = Topology.API_CONSUMER_GROUP)
     public void onProgress(ConsumerRecord<String, String> record) {
-        dispatcher.progress(record.value());
+        dispatcher.progress(record.value(), headers(record));
     }
 
     @KafkaListener(topics = Topology.KAFKA_OUTPUT_TOPIC, groupId = Topology.API_CONSUMER_GROUP)

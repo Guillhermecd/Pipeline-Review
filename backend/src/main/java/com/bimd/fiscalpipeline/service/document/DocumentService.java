@@ -2,6 +2,7 @@ package com.bimd.fiscalpipeline.service.document;
 
 import com.bimd.fiscalpipeline.config.PipelineProperties;
 import com.bimd.fiscalpipeline.domain.dto.DocumentCorrectionRequest;
+import com.bimd.fiscalpipeline.domain.dto.DocumentFileResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
@@ -15,7 +16,10 @@ import com.bimd.fiscalpipeline.exception.UnsupportedDocumentTypeException;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.storage.StorageService;
+import com.bimd.fiscalpipeline.util.IsoDates;
 import com.bimd.fiscalpipeline.util.Sha256;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +48,7 @@ public class DocumentService {
     private final DocumentReviewService reviewService;
     private final DocumentResponseAssembler responseAssembler;
     private final PipelineProperties properties;
+    private final Clock clock;
 
     /**
      * The file's SHA-256 is the idempotency key. The object goes to storage before the database
@@ -81,6 +86,16 @@ public class DocumentService {
         return documentRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
+    }
+
+    /** A temporary link to the uploaded file, for the preview on the review screen. */
+    @Transactional(readOnly = true)
+    public DocumentFileResponse getFileLink(UUID id) {
+        Document document = documentRepository.findById(id).orElseThrow(() -> new DocumentNotFoundException(id));
+        Duration validity = storageService.presignedUrlValidity();
+        return new DocumentFileResponse(
+                storageService.createPresignedDownload(document.getFileKey(), validity),
+                IsoDates.format(clock.instant().plus(validity)));
     }
 
     public DocumentResponse reprocess(UUID id) {

@@ -18,6 +18,7 @@ import com.bimd.fiscalpipeline.repository.ExtractionRepository;
 import com.bimd.fiscalpipeline.repository.FieldConfidenceRepository;
 import com.bimd.fiscalpipeline.repository.FiscalDataRepository;
 import com.bimd.fiscalpipeline.repository.ReviewRepository;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.pipeline.PipelineStateService;
 import com.bimd.fiscalpipeline.service.validation.DocumentEvaluator;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +52,7 @@ public class DocumentReviewService {
     private final DocumentEvaluator documentEvaluator;
     private final PipelineStateService stateService;
     private final PipelineEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEvents;
     private final Clock clock;
 
     /**
@@ -78,6 +81,7 @@ public class DocumentReviewService {
         fiscalDataRepository.saveAndFlush(fiscalData);
         documentEvaluator.evaluate(document);
         document.setUpdatedAt(now());
+        applicationEvents.publishEvent(new PipelineChange.DocumentChanged(documentId));
         return document;
     }
 

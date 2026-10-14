@@ -1,5 +1,6 @@
 package com.bimd.fiscalpipeline.service.outbox;
 
+import com.bimd.fiscalpipeline.domain.dto.PipelineStream;
 import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
 import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
@@ -11,6 +12,7 @@ import com.bimd.fiscalpipeline.messaging.MessagingRouter;
 import com.bimd.fiscalpipeline.messaging.Topology;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.repository.OutboxEventRepository;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.pipeline.PipelineStateService;
 import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
@@ -22,6 +24,7 @@ import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class OutboxPublisher {
 
     private static final String QUEUED_STAGE = "Na fila";
+    /** The outbox only carries the message that starts a run, which is always the first attempt. */
+    private static final int FIRST_ATTEMPT = 1;
 
     private final OutboxEventRepository outboxEventRepository;
     private final DocumentRepository documentRepository;
@@ -39,6 +44,7 @@ public class OutboxPublisher {
     private final PipelineEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final PipelineTracer tracer;
+    private final ApplicationEventPublisher applicationEvents;
     private final Clock clock;
 
     /**
@@ -80,6 +86,13 @@ public class OutboxPublisher {
         }
 
         event.setPublishedAt(IsoDates.format(clock.instant()));
+        applicationEvents.publishEvent(new PipelineChange.EnvelopeSeen(new PipelineStream.Envelope(
+                event.getEventType(),
+                document.getId(),
+                document.getIdempotencyKey(),
+                FIRST_ATTEMPT,
+                event.getTraceparent(),
+                broker)));
         if (stateService.canMove(document.getStatus(), DocumentStatus.QUEUED)) {
             stateService.move(document, DocumentStatus.QUEUED);
         }

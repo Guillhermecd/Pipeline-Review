@@ -19,7 +19,7 @@ public class RabbitPipelineListener {
 
     @RabbitListener(queues = Topology.RABBIT_PROGRESS_QUEUE)
     public void onProgress(Message message) {
-        dispatcher.progress(body(message));
+        dispatcher.progress(body(message), headers(message));
     }
 
     @RabbitListener(queues = Topology.RABBIT_OUTPUT_QUEUE)
