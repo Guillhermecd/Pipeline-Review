@@ -50,8 +50,7 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **QR Code vence o texto.** O CNPJ lido da chave de acesso da NFC-e substitui o do LLM, com confiança 1,0.
 - **CPF mascarado antes do LLM.** CPF formatado, ou 11 dígitos precedidos do rótulo "CPF", vira `***.***.***-**`. CNPJ e chave de acesso passam intactos.
 - **Sem binarização.** O pré-processamento endireita a imagem e equaliza o contraste (CLAHE). A binarização prevista apaga traços finos de cupom térmico e derruba o score do OCR.
-- **Falhas vão direto para a DLQ (provisório).** Até a fase F3 criar o retry 1 s · 2 s · 4 s, falha transitória também vai para a DLQ, com a classe no header `x-error-class`. Nada é descartado nem reentregue em laço.
-- **Erro inesperado também vai para a DLQ.** Um bug no worker não pode reentregar o mesmo documento para sempre. Só falha ao publicar no broker deixa a mensagem sem ack.
+- **Erro inesperado vai para a DLQ.** Um bug no worker não pode reentregar o mesmo documento para sempre. Só falha ao publicar no broker deixa a mensagem sem ack.
 - **`storage/` no worker.** Pasta a mais em relação à estrutura do `BACKEND.md`, para a leitura do arquivo no MinIO.
 
 ## Worker: dependências
@@ -62,9 +61,23 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Modelo padrão `gemini-3.5-flash-lite`.** `gemini-2.5-flash` foi aposentado (404). Em 13/10/2026 os modelos `flash` da série 3 levaram de 25 a 90 s por chamada, com 503 e 504 frequentes; o `flash-lite` respondeu em 1 a 2 s com o mesmo resultado nas amostras. A confiança vem da conferência do valor contra o texto do documento, não do modelo. Troca por `LLM_MODEL`.
 - **Modelos do OCR** são baixados na primeira execução (Hugging Face) e ficam em `~/.paddlex`.
 
+## Mensageria e confiabilidade
+
+- **Topologia em um arquivo.** `contracts/topology.json` fixa nomes de tópicos e filas e os argumentos das filas de retry. Backend e worker declaram os mesmos objetos e cada lado tem um teste que compara suas constantes com o arquivo. O RabbitMQ responde 406 a quem declara uma fila com argumentos diferentes.
+- **Backoff fixo pelo contrato.** 1 s, 2 s e 4 s não são mais variável de ambiente (`RETRY_BACKOFF_MS` saiu): o valor define o nome e o TTL das filas do RabbitMQ, então mudar exige alterar o contrato.
+- **Contagem de tentativas no envelope.** O worker republica a mensagem como `documento.retry` com `attempt + 1`. O header `x-death` do RabbitMQ não é usado: com uma fila por atraso, cada fila conta 1.
+- **Retry no Kafka.** A mensagem vai para `documentos.recebidos-retry` com o horário em `x-not-before`. Um consumer do worker (grupo `extrator-py-retry`) pausa a partição até o horário e devolve a mensagem para `documentos.recebidos`. Uma espera de 4 s segura as mensagens seguintes da mesma partição por até 4 s.
+- **Relay do outbox.** A cada `OUTBOX_POLL_MS` lê a linha pendente mais antiga de cada broker com `FOR UPDATE SKIP LOCKED`, publica e só marca `published_at` depois do confirm (`acks=all` no Kafka, publisher confirms no RabbitMQ). Se cair entre publicar e marcar, a mensagem sai de novo: a entrega é "ao menos uma vez".
+- **Guarda de estado.** Todo consumo no backend trava a linha do documento e confere, na mesma transação: evento ainda não aplicado (`processed_events`), `requestId` igual ao atual, transição permitida, tentativa não anterior à registrada. Falhou alguma, a mensagem é descartada com log `debug`.
+- **Transições além da tabela do `BACKEND.md`.** Progresso e resultado trafegam em filas diferentes, então o resultado pode chegar antes do progresso. A máquina aceita `EXTRACTED` e `DEAD_LETTERED` a partir de `QUEUED`, `OCR`, `EXTRACTING` e `RETRY_WAIT`, e `RETRY_WAIT` a partir de `QUEUED`. Nunca volta: progresso atrasado é descartado.
+- **Reprocessar só de `DEAD_LETTERED`.** A checagem é explícita, porque `RECEIVED → QUEUED` também é uma transição válida (a do relay).
+- **Falha ao gravar no backend.** O listener tenta de novo com backoff (5 vezes no RabbitMQ, cerca de 15 s no Kafka). Depois disso a mensagem é descartada com log de erro e o documento fica no estado anterior. Mensagem ilegível é descartada na primeira leitura.
+- **Um broker fora do ar não para o outro.** No worker cada broker tem seu laço de consumo, que reconecta a cada 5 s. No backend o relay trata cada broker em separado.
+- **Textos de `retryPolicy`.** São os do mock do frontend, como o `BACKEND.md` pede. Eles citam `@RetryableTopic` e `x-death`, que a implementação não usa.
+
 ## Upload e idempotência
 
 1. A API calcula o SHA-256 do arquivo. Se já existe documento com essa chave, responde 409 e nada é criado.
 2. O arquivo é gravado no MinIO em `documents/{sha256}/{nome}` **antes** da transação. Um reenvio sobrescreve a mesma chave; já um documento gravado sem arquivo não teria como ser recuperado.
-3. Em uma única transação: documento (`RECEIVED`), linha em `outbox_events` com o envelope completo e o evento de log.
+3. Em uma única transação: documento (`RECEIVED`), linha em `outbox_events` com o envelope completo e o evento de log. O relay publica a linha e move o documento para `QUEUED`.
 4. Dois envios simultâneos do mesmo arquivo passam pela checagem do passo 1. Quem decide é a constraint `UNIQUE (idempotency_key)`: o perdedor recebe 409.

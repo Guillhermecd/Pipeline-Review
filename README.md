@@ -68,7 +68,18 @@ cd worker && uv run python scripts/smoke.py            # usa a NFC-e de amostra
 cd worker && uv run python scripts/smoke.py nota.pdf   # ou um arquivo seu
 ```
 
-O script envia o arquivo pela API, publica o envelope na fila de entrada (papel do relay, que chega na fase F3) e espera o `documento.extraido`, validando contra `contracts/`.
+O script envia o arquivo pela API, acompanha o status do documento e valida a extração gravada contra `contracts/`. Termina com código 1 se o documento for para a DLQ.
+
+Trocar o broker dos próximos documentos e reprocessar um documento da DLQ:
+
+```sh
+curl -X PUT localhost:1337/api/v1/broker -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"kind":"rabbitmq"}'
+
+curl -X POST localhost:1337/api/v1/documentos/$ID/reprocessar -H "Authorization: Bearer $TOKEN"
+```
+
+Falha transitória (LLM 429/5xx, timeout, MinIO fora) é repetida após 1 s, 2 s e 4 s. A 4ª falha, ou um erro permanente, leva o documento para a DLQ.
 
 As seis amostras ficam em `backend/src/main/resources/samples/` e `frontend/public/samples/`. São sintéticas e geradas por `uv run python scripts/generate_samples.py`.
 
