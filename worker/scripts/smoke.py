@@ -1,8 +1,10 @@
-"""End-to-end check: a real upload goes through the API, the broker and the worker.
+"""End-to-end check: real uploads go through the API, the broker, the worker and the validation.
 
 Needs the compose services, the backend (:1337) and the worker running.
 
-Usage (from worker/):  uv run python scripts/smoke.py [path/to/document]
+Usage (from worker/):
+    uv run python scripts/smoke.py [path/to/document]   one file; fails if it ends in the DLQ
+    uv run python scripts/smoke.py --samples            the six samples, checked against their scenario
 
 The script only talks to the API, as the frontend does: it uploads, then follows the document's
 status. The stored extraction is read from the database to be checked against the contract.
@@ -21,21 +23,24 @@ from uuid import uuid4
 import httpx
 from jsonschema import Draft202012Validator
 
+from sample_data import SAMPLES
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DOCUMENT = (
-    REPO_ROOT / "backend" / "src" / "main" / "resources" / "samples" / "nfce_farmacia_central.pdf"
-)
+SAMPLES_DIR = REPO_ROOT / "backend" / "src" / "main" / "resources" / "samples"
+DEFAULT_DOCUMENT = SAMPLES_DIR / "nfce_farmacia_central.pdf"
 PAYLOAD_SCHEMA = REPO_ROOT / "contracts" / "events" / "documento-extraido.payload.schema.json"
 POSTGRES_CONTAINER = "pipeline-fiscal-postgres"
 WAIT_SECONDS = 180.0
 POLL_SECONDS = 0.5
-IN_FLIGHT = {"RECEIVED", "QUEUED", "OCR", "EXTRACTING", "RETRY_WAIT"}
+IN_FLIGHT = {"RECEIVED", "QUEUED", "OCR", "EXTRACTING", "RETRY_WAIT", "EXTRACTED", "VALIDATING"}
 DEAD_LETTERED = "DEAD_LETTERED"
+APPROVING_SCENARIO = "Deve aprovar"
 
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("document", nargs="?", type=Path, default=DEFAULT_DOCUMENT)
+    parser.add_argument("--samples", action="store_true", help="run the six samples and check each outcome")
     parser.add_argument("--api", default="http://localhost:1337")
     parser.add_argument("--email", default="admin@oaksd.local")
     parser.add_argument("--password", default="ChangeMe123!")
@@ -57,7 +62,7 @@ def upload(client: httpx.Client, path: Path) -> dict[str, Any]:
 
 
 def follow(client: httpx.Client, document_id: str) -> dict[str, Any]:
-    """Prints each stage the document goes through, until it leaves the worker's hands."""
+    """Prints each stage the document goes through, until the pipeline is done with it."""
     deadline = time.monotonic() + WAIT_SECONDS
     last_stage = None
     while True:
@@ -85,6 +90,36 @@ def stored_extraction(document_id: str) -> dict[str, Any]:
     return payload
 
 
+def process(client: httpx.Client, path: Path) -> dict[str, Any]:
+    """Uploads one file, follows it and prints the decision. The extraction must fit the contract."""
+    document = upload(client, path)
+    print(f"{path.name} as {document['code']} on {document['broker']}")
+    document = follow(client, document["id"])
+    if document["status"] == DEAD_LETTERED:
+        print(f"  DLQ after {document['attempts']} attempt(s): {document['lastError']}")
+        return document
+    schema = json.loads(PAYLOAD_SCHEMA.read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(stored_extraction(document["id"]))
+    print(f"  {document['outcome']}: {document['reason']} (confidence {document['confidence']:.2f})")
+    for validation in document["validations"]:
+        mark = "ok  " if validation["ok"] else "FAIL"
+        print(f"    {mark} {validation['name']}: {validation['detail']}")
+    return document
+
+
+def run_samples(client: httpx.Client) -> int:
+    """Each sample must end as its scenario says: approved by itself, or sent to review."""
+    wrong = 0
+    for sample in SAMPLES:
+        document = process(client, SAMPLES_DIR / sample.file_name)
+        expected = "auto" if sample.scenario == APPROVING_SCENARIO else "review"
+        if document["outcome"] != expected:
+            wrong += 1
+            print(f"  UNEXPECTED: scenario '{sample.scenario}' should end as {expected}")
+    print(f"{len(SAMPLES) - wrong} of {len(SAMPLES)} samples ended as their scenario says")
+    return 1 if wrong else 0
+
+
 def main() -> int:
     arguments = parse_arguments()
     with httpx.Client(base_url=arguments.api, timeout=30) as client:
@@ -93,20 +128,10 @@ def main() -> int:
         )
         login.raise_for_status()
         client.headers["Authorization"] = f"Bearer {login.json()['token']}"
-
-        document = upload(client, arguments.document)
-        print(f"Uploaded {arguments.document.name} as {document['code']} on {document['broker']}")
-        document = follow(client, document["id"])
-
-    if document["status"] == DEAD_LETTERED:
-        print(f"Document went to the DLQ after {document['attempts']} attempt(s): {document['lastError']}")
-        return 1
-
-    payload = stored_extraction(document["id"])
-    Draft202012Validator(json.loads(PAYLOAD_SCHEMA.read_text(encoding="utf-8"))).validate(payload)
-    print("The stored extraction is valid against the contract:")
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
-    return 0
+        if arguments.samples:
+            return run_samples(client)
+        document = process(client, arguments.document)
+    return 1 if document["status"] == DEAD_LETTERED else 0
 
 
 if __name__ == "__main__":

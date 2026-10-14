@@ -75,6 +75,20 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Um broker fora do ar não para o outro.** No worker cada broker tem seu laço de consumo, que reconecta a cada 5 s. No backend o relay trata cada broker em separado.
 - **Textos de `retryPolicy`.** São os do mock do frontend, como o `BACKEND.md` pede. Eles citam `@RetryableTopic` e `x-death`, que a implementação não usa.
 
+## Validação, score e revisão
+
+- **Tudo em uma transação.** Ao receber `documento.extraido`, o backend grava a extração, os campos, os itens e as confianças, roda as regras, calcula o score e decide, na mesma transação da mudança de estado. O documento passa por `EXTRACTED` e `VALIDATING` sem que ninguém de fora veja esses estados.
+- **O payload não é confiável.** `ExtractionPayloadReader` lê cada valor com defesa: ausente, fora do formato ou maior que a coluna vira nulo (campos) ou é ignorado (itens), e a confiança do campo vai a zero. Como o listener repete até conseguir, uma exceção causada pelos dados travaria a fila. Com isso o pior caso é o documento ir para revisão. O byte NUL é removido da mensagem, porque o PostgreSQL não o aceita em texto nem em `jsonb`.
+- **CNPJ grande demais é descartado, nome é cortado.** Um CNPJ com mais de 18 caracteres vira nulo; um emitente com mais de 255 é truncado.
+- **Textos sem definição no `BACKEND.md`.** Total ausente: `R$ 271,30 vs total ausente`. Data ausente ou ilegível: `data ausente`, e a regra falha. CNPJ com caractere que não é letra nem dígito, ou com letra no dígito verificador: `caracteres inválidos para um CNPJ`.
+- **Soma dos itens.** Soma `quantidade × preço` de todas as linhas e arredonda uma vez para centavos (meio para cima), como a amostra é gerada.
+- **Score com 4 casas.** O valor comparado com o limiar é o mesmo que fica em `documents.confidence`. Um score de 0,8499 aparece como 85% e ainda assim vai para revisão.
+- **Itens sem confiança própria de origem.** `field_confidences` guarda `ITEMS` com origem `llm`; o contrato só traz `itemsConfidence`.
+- **Correção não muda o motivo.** O `PATCH` recalcula regras e score, mas `reason` continua sendo o motivo pelo qual o documento foi para revisão.
+- **Correções gravadas na decisão.** `reviews.corrections` é calculado ao aprovar ou rejeitar, comparando o valor extraído com o atual, só para campos que um revisor alterou. Formato: `{"total": {"from": "283.80", "to": "271.30"}}`.
+- **`finishedAt` é o fim do pipeline.** Não muda quando o revisor decide; `durationMs` continua medindo o processamento automático.
+- **`GET /api/v1/configuracao`** entrou nesta fase, por expor o limiar.
+
 ## Upload e idempotência
 
 1. A API calcula o SHA-256 do arquivo. Se já existe documento com essa chave, responde 409 e nada é criado.
