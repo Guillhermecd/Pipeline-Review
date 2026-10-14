@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -67,7 +68,13 @@ public class EventStreamService {
                 new PipelineStream.Simulator(false, properties.messagingSimulatorUrl(), 0));
     }
 
+    /**
+     * Reads the document again in a transaction of its own. The one that just committed is still
+     * bound to this thread and would answer from its cache; with two listeners changing the same
+     * document back to back, the screen could then receive the older state last and keep it.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onDocumentChanged(DocumentChanged change) {
         documentRepository
                 .findById(change.documentId())

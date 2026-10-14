@@ -6,11 +6,11 @@ import type {
   PipelineSnapshot,
   UploadResult,
 } from '../modules/types';
-import { API_BASE_URL } from '../../config';
 import { clockTime } from '../../utils/format';
 import { api, authStorage } from '../modules/api';
 import { BROKERS } from '../mock/fixtures';
 import type { ApiDocument, ApiSimulator, ApiSnapshot } from './api-types';
+import { EventStream } from './event-stream';
 import { toPipelineDocument } from './mappers';
 
 const MAX_DOCUMENTS = 40;
@@ -28,7 +28,7 @@ type State = {
   simulator: ApiSimulator;
 };
 
-// Estado ao vivo do pipeline: GET implícito no snapshot do stream + eventos SSE de /eventos.
+// Estado ao vivo do pipeline: o snapshot que o stream /eventos manda ao conectar, mais os eventos.
 // Expõe a mesma interface do mockEngine (subscribe/getSnapshot), então as telas não mudam.
 export class LivePipelineStore {
   private state: State = {
@@ -43,7 +43,11 @@ export class LivePipelineStore {
   };
   private snapshot: PipelineSnapshot = this.buildSnapshot();
   private listeners = new Set<() => void>();
-  private source: EventSource | null = null;
+  private stream = new EventStream({
+    onEvent: (name, data) => this.handle(name, data),
+    // Uma chamada autenticada qualquer: no 401 o cliente HTTP encerra a sessão e volta ao login.
+    onUnauthorized: () => void api('/configuracao').catch(() => undefined),
+  });
   private uploadSequence = 0;
 
   subscribe = (listener: () => void) => {
@@ -59,35 +63,28 @@ export class LivePipelineStore {
 
   // Uma só conexão, mesmo que vários componentes assinem (ou o StrictMode assine duas vezes).
   connect() {
-    const token = authStorage.getToken();
-    if (this.source || !token) return;
-    // EventSource não envia headers; só esta rota aceita o token na query string.
-    const source = new EventSource(
-      `${API_BASE_URL}/eventos?access_token=${encodeURIComponent(token)}`,
-    );
-    source.addEventListener('snapshot', (event) => this.applySnapshot(parse<ApiSnapshot>(event)));
-    source.addEventListener('document', (event) => this.upsert(parse<ApiDocument>(event)));
-    source.addEventListener('event', (event) => this.addEvent(parse<PipelineEvent>(event)));
-    source.addEventListener('envelope', (event) =>
-      this.update({ lastEnvelope: parse<EventEnvelope>(event) }),
-    );
-    source.addEventListener('broker', (event) =>
-      this.update({ broker: parse<BrokerConfig>(event) }),
-    );
-    source.addEventListener('simulator', (event) =>
-      this.update({ simulator: parse<ApiSimulator>(event) }),
-    );
-    // O EventSource reconecta sozinho e não informa o status HTTP. Uma chamada autenticada
-    // distingue "API fora do ar" de "sessão expirada": no 401 o cliente HTTP volta para o login.
-    source.onerror = () => {
-      api('/configuracao').catch(() => undefined);
-    };
-    this.source = source;
+    if (authStorage.getToken()) this.stream.open();
   }
 
   disconnect() {
-    this.source?.close();
-    this.source = null;
+    this.stream.close();
+  }
+
+  private handle(name: string, data: string) {
+    switch (name) {
+      case 'snapshot':
+        return this.applySnapshot(JSON.parse(data) as ApiSnapshot);
+      case 'document':
+        return this.upsert(JSON.parse(data) as ApiDocument);
+      case 'event':
+        return this.addEvent(JSON.parse(data) as PipelineEvent);
+      case 'envelope':
+        return this.update({ lastEnvelope: JSON.parse(data) as EventEnvelope });
+      case 'broker':
+        return this.update({ broker: JSON.parse(data) as BrokerConfig });
+      case 'simulator':
+        return this.update({ simulator: JSON.parse(data) as ApiSimulator });
+    }
   }
 
   // A resposta de uma ação costuma chegar antes do evento do stream, e aplicá-la já deixa a tela
@@ -161,7 +158,5 @@ export class LivePipelineStore {
     };
   }
 }
-
-const parse = <T>(event: Event) => JSON.parse((event as MessageEvent<string>).data) as T;
 
 export const liveStore = new LivePipelineStore();

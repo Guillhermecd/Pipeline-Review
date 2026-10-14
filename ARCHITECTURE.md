@@ -106,6 +106,7 @@ A especificação completa está em [BACKEND.md](BACKEND.md). Este arquivo regis
 - **Conexões SSE em memória.** Vale para uma instância da API.
 - **`pipeline_events.sequence`** (migração V2) dá a ordem de gravação; eventos do mesmo milissegundo ficavam sem ordem. A tabela é cortada nos 500 mais recentes a cada minuto.
 - **401 sem token.** Requisição sem token válido responde 401 (antes 403), para o frontend saber que precisa de login.
+- **Token do stream no header, não na URL.** O backend aceita `?access_token=` em `/eventos`, como o `BACKEND.md` pede para o `EventSource`. Mas a URL da requisição é gravada pelo agente no span HTTP (`url.query`), e o JWT ia parar no Jaeger. O frontend por isso lê o stream com `fetch` e header `Authorization` (`api/live/event-stream.ts`), com reconexão a cada 3 s. Quem usar `EventSource` com o token na URL continua expondo o token em traces e logs de acesso.
 - **Simulador de mensageria** aparece como desconectado; o espelhamento é da fase F6.
 - **Frontend: dois modos.** `VITE_API_MODE=mock` (padrão) simula tudo no navegador; `live` usa login, REST e SSE. Os services escolhem a fonte; as páginas são as mesmas. `api/live/mappers.ts` converte o formato da API para o que as telas usam.
 - **Correção de campo no modo live.** O campo dispara a cada tecla; o envio espera 600 ms de pausa e ignora total incompleto.
