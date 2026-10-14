@@ -131,7 +131,7 @@ class IdempotencyIT extends AbstractIntegrationTest {
         Received input = worker().awaitInput(broker, documentId, requestId);
 
         ObjectNode result = worker().extracted(input, 1);
-        awaitStatus(documentId, DocumentStatus.EXTRACTED);
+        awaitStatus(documentId, DocumentStatus.AUTO_APPROVED);
         // The same message again, then a second answer to the same request.
         worker().resend(input, result);
         worker().extracted(input, 1);
@@ -140,7 +140,7 @@ class IdempotencyIT extends AbstractIntegrationTest {
                 .atMost(PIPELINE_TIMEOUT)
                 .until(() -> extractionRepository.findByDocumentId(documentId).size() == 1);
         assertThat(documentRepository.findById(documentId).orElseThrow().getStatus())
-                .isEqualTo(DocumentStatus.EXTRACTED);
+                .isEqualTo(DocumentStatus.AUTO_APPROVED);
         assertThat(processedEventRepository.existsById(UUID.fromString(result.get("eventId").asText())))
                 .isTrue();
     }

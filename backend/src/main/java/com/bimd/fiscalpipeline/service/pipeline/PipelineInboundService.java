@@ -4,19 +4,16 @@ import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
-import com.bimd.fiscalpipeline.domain.model.Extraction;
 import com.bimd.fiscalpipeline.domain.model.ProcessedEvent;
 import com.bimd.fiscalpipeline.messaging.EventEnvelope;
 import com.bimd.fiscalpipeline.messaging.ProgressPayload;
 import com.bimd.fiscalpipeline.messaging.ProgressStage;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
-import com.bimd.fiscalpipeline.repository.ExtractionRepository;
 import com.bimd.fiscalpipeline.repository.ProcessedEventRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.util.IsoDates;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +37,7 @@ public class PipelineInboundService {
 
     private final DocumentRepository documentRepository;
     private final ProcessedEventRepository processedEventRepository;
-    private final ExtractionRepository extractionRepository;
+    private final ExtractionResultService extractionResultService;
     private final PipelineStateService stateService;
     private final PipelineEventPublisher eventPublisher;
     private final Clock clock;
@@ -70,19 +67,17 @@ public class PipelineInboundService {
         });
     }
 
-    /** Stores the worker's answer as received. Validation and scoring pick it up from EXTRACTED. */
+    /** Stores the answer, validates it and decides, in the same transaction as the state change. */
     @Transactional
     public void onExtracted(EventEnvelope envelope) {
         claim(envelope, DocumentStatus.EXTRACTED).ifPresent(document -> {
-            Map<String, Object> payload = envelope.payload();
             document.setAttempts(envelope.attempt());
-            document.setKind(text(payload.get("documentKind")));
-            extractionRepository.save(newExtraction(document, envelope, payload));
             eventPublisher.publish(
                     ServiceName.API,
                     document.getCode(),
                     "consume " + document.getBroker().getOutputQueue(),
                     EventLevel.OK);
+            extractionResultService.process(document, envelope);
         });
     }
 
@@ -143,22 +138,6 @@ public class PipelineInboundService {
         return Optional.of(document);
     }
 
-    private Extraction newExtraction(Document document, EventEnvelope envelope, Map<String, Object> payload) {
-        Extraction extraction = new Extraction();
-        extraction.setId(UUID.randomUUID());
-        extraction.setDocumentId(document.getId());
-        extraction.setRequestId(envelope.requestId());
-        extraction.setRawResult(payload);
-        extraction.setOcrEngine(text(payload.get("ocrEngine")));
-        extraction.setLlmModel(text(payload.get("llmModel")));
-        if (payload.get("tokens") instanceof Map<?, ?> tokens) {
-            extraction.setInputTokens(count(tokens.get("input")));
-            extraction.setOutputTokens(count(tokens.get("output")));
-        }
-        extraction.setCreatedAt(now());
-        return extraction;
-    }
-
     /** {@code consume {input queue}}, with {@code · tentativa n} from the second attempt on (§9.2). */
     private String consumeMessage(Document document, EventEnvelope envelope) {
         String message = "consume " + document.getBroker().getInputQueue();
@@ -168,14 +147,6 @@ public class PipelineInboundService {
     private String seconds(Long millis) {
         long safeMillis = millis == null ? 0 : millis;
         return BigDecimal.valueOf(safeMillis).divide(MILLIS_PER_SECOND).stripTrailingZeros().toPlainString();
-    }
-
-    private String text(Object value) {
-        return value instanceof String string ? string : null;
-    }
-
-    private Integer count(Object value) {
-        return value instanceof Number number ? number.intValue() : null;
     }
 
     private String now() {

@@ -55,7 +55,9 @@ public class PipelineMessageDispatcher {
     private Optional<EventEnvelope> read(String body, String expectedType) {
         EventEnvelope envelope;
         try {
-            envelope = objectMapper.readValue(body, EventEnvelope.class);
+            // PostgreSQL stores neither a NUL byte in text nor \u0000 in jsonb. Left in, the insert would
+            // fail on every delivery of the same message.
+            envelope = objectMapper.readValue(body.replace("\\u0000", "").replace("\u0000", ""), EventEnvelope.class);
         } catch (JsonProcessingException e) {
             log.warn("Dropped a message that is not a valid envelope: {}", e.getOriginalMessage());
             return Optional.empty();

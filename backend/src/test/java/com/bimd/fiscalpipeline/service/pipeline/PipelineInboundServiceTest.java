@@ -12,13 +12,11 @@ import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
-import com.bimd.fiscalpipeline.domain.model.Extraction;
 import com.bimd.fiscalpipeline.domain.model.ProcessedEvent;
 import com.bimd.fiscalpipeline.messaging.EventEnvelope;
 import com.bimd.fiscalpipeline.messaging.ProgressPayload;
 import com.bimd.fiscalpipeline.messaging.ProgressStage;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
-import com.bimd.fiscalpipeline.repository.ExtractionRepository;
 import com.bimd.fiscalpipeline.repository.ProcessedEventRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import java.time.Clock;
@@ -48,7 +46,7 @@ class PipelineInboundServiceTest {
     private ProcessedEventRepository processedEventRepository;
 
     @Mock
-    private ExtractionRepository extractionRepository;
+    private ExtractionResultService extractionResultService;
 
     @Mock
     private PipelineEventPublisher eventPublisher;
@@ -61,7 +59,7 @@ class PipelineInboundServiceTest {
         service = new PipelineInboundService(
                 documentRepository,
                 processedEventRepository,
-                extractionRepository,
+                extractionResultService,
                 new PipelineStateService(clock),
                 eventPublisher,
                 clock);
@@ -126,7 +124,7 @@ class PipelineInboundServiceTest {
         service.onExtracted(envelope(UUID.randomUUID(), 1, Map.of("documentKind", "NF-e")));
 
         assertUntouched(document, DocumentStatus.QUEUED);
-        verifyNoInteractions(extractionRepository);
+        verifyNoInteractions(extractionResultService);
     }
 
     @Test
@@ -157,29 +155,15 @@ class PipelineInboundServiceTest {
     }
 
     @Test
-    void should_storeExtraction_when_resultOvertakesTheProgressMessage() {
+    void should_handOverToValidation_when_resultOvertakesTheProgressMessage() {
         Document document = stored(DocumentStatus.OCR, 1);
-        Map<String, Object> payload = Map.of(
-                "documentKind", "NFC-e",
-                "ocrEngine", "paddleocr",
-                "llmModel", "gemini-3.5-flash-lite",
-                "tokens", Map.of("input", 250, "output", 165));
+        EventEnvelope envelope = envelope(REQUEST_ID, 1, Map.of("documentKind", "NFC-e"));
 
-        service.onExtracted(envelope(REQUEST_ID, 1, payload));
+        service.onExtracted(envelope);
 
         assertThat(document.getStatus()).isEqualTo(DocumentStatus.EXTRACTED);
-        assertThat(document.getKind()).isEqualTo("NFC-e");
-        ArgumentCaptor<Extraction> saved = ArgumentCaptor.forClass(Extraction.class);
-        verify(extractionRepository).save(saved.capture());
-        Extraction extraction = saved.getValue();
-        assertThat(extraction.getDocumentId()).isEqualTo(DOCUMENT_ID);
-        assertThat(extraction.getRequestId()).isEqualTo(REQUEST_ID);
-        assertThat(extraction.getRawResult()).isEqualTo(payload);
-        assertThat(extraction.getOcrEngine()).isEqualTo("paddleocr");
-        assertThat(extraction.getLlmModel()).isEqualTo("gemini-3.5-flash-lite");
-        assertThat(extraction.getInputTokens()).isEqualTo(250);
-        assertThat(extraction.getOutputTokens()).isEqualTo(165);
         verify(eventPublisher).publish(ServiceName.API, "DOC-1007", "consume documentos.extraidos", EventLevel.OK);
+        verify(extractionResultService).process(document, envelope);
     }
 
     @Test

@@ -1,11 +1,11 @@
 package com.bimd.fiscalpipeline.service.document;
 
 import com.bimd.fiscalpipeline.config.PipelineProperties;
+import com.bimd.fiscalpipeline.domain.dto.DocumentCorrectionRequest;
 import com.bimd.fiscalpipeline.domain.dto.DocumentResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
-import com.bimd.fiscalpipeline.domain.mapper.DocumentMapper;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.exception.DocumentNotFoundException;
 import com.bimd.fiscalpipeline.exception.DocumentTooLargeException;
@@ -15,10 +15,7 @@ import com.bimd.fiscalpipeline.exception.UnsupportedDocumentTypeException;
 import com.bimd.fiscalpipeline.repository.DocumentRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.storage.StorageService;
-import com.bimd.fiscalpipeline.util.IsoDates;
 import com.bimd.fiscalpipeline.util.Sha256;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +41,9 @@ public class DocumentService {
     private final ReprocessService reprocessService;
     private final StorageService storageService;
     private final PipelineEventPublisher eventPublisher;
-    private final DocumentMapper documentMapper;
+    private final DocumentReviewService reviewService;
+    private final DocumentResponseAssembler responseAssembler;
     private final PipelineProperties properties;
-    private final Clock clock;
 
     /**
      * The file's SHA-256 is the idempotency key. The object goes to storage before the database
@@ -75,9 +72,8 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public List<DocumentResponse> listRecent(int limit) {
         int safeLimit = Math.clamp(limit, 1, MAX_LIST_LIMIT);
-        return documentRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, safeLimit)).stream()
-                .map(this::toResponse)
-                .toList();
+        return responseAssembler.toResponses(
+                documentRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, safeLimit)));
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +85,18 @@ public class DocumentService {
 
     public DocumentResponse reprocess(UUID id) {
         return toResponse(reprocessService.reprocess(id));
+    }
+
+    public DocumentResponse correct(UUID id, DocumentCorrectionRequest correction) {
+        return toResponse(reviewService.correct(id, correction));
+    }
+
+    public DocumentResponse approve(UUID id, UUID reviewerId) {
+        return toResponse(reviewService.approve(id, reviewerId));
+    }
+
+    public DocumentResponse reject(UUID id, UUID reviewerId) {
+        return toResponse(reviewService.reject(id, reviewerId));
     }
 
     private void validate(DocumentUpload upload) {
@@ -127,8 +135,7 @@ public class DocumentService {
     }
 
     private DocumentResponse toResponse(Document document) {
-        Instant end = document.getFinishedAt() != null ? IsoDates.parse(document.getFinishedAt()) : clock.instant();
-        return documentMapper.toResponse(document, IsoDates.millisBetween(document.getReceivedAt(), end));
+        return responseAssembler.toResponse(document);
     }
 
     private String sanitize(String fileName) {

@@ -78,9 +78,13 @@ public class FakeWorker {
                 .set("payload", payload));
     }
 
-    /** Sends a result and returns it, so a test can deliver the very same message again. */
+    /** Sends a result every rule accepts, and returns it so a test can deliver the same message again. */
     public ObjectNode extracted(Received input, int attempt) {
-        ObjectNode result = answer(input, "documento.extraido", attempt).set("payload", extractionPayload());
+        return extracted(input, attempt, validPayload());
+    }
+
+    public ObjectNode extracted(Received input, int attempt, JsonNode payload) {
+        ObjectNode result = answer(input, "documento.extraido", attempt).set("payload", payload);
         resend(input, result);
         return result;
     }
@@ -172,12 +176,23 @@ public class FakeWorker {
                 && requestId.toString().equals(envelope.path("requestId").asText());
     }
 
-    private JsonNode extractionPayload() {
+    /**
+     * The contract example as it is: the note whose items add up to 271.30 but prints 283.80, so
+     * the sum rule fails.
+     */
+    public ObjectNode examplePayload() {
         try {
-            return objectMapper.readTree(EXTRACTED_EXAMPLE.toFile()).get("payload");
+            return (ObjectNode) objectMapper.readTree(EXTRACTED_EXAMPLE.toFile()).get("payload");
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read " + EXTRACTED_EXAMPLE, e);
         }
+    }
+
+    /** The example with the total fixed: every rule passes, with 95% confidence. */
+    public ObjectNode validPayload() {
+        ObjectNode payload = examplePayload();
+        ((ObjectNode) payload.get("fields").get("total")).put("value", "271.30");
+        return payload;
     }
 
     private ObjectNode parse(String body) {

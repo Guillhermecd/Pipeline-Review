@@ -112,8 +112,8 @@ class RetryBackoffIT extends AbstractIntegrationTest {
                         && extractionRepository.findByDocumentId(documentId).isEmpty());
 
         worker().extracted(secondInput, 1);
-        Document extracted = awaitStatus(documentId, DocumentStatus.EXTRACTED);
-        assertThat(extracted.getKind()).isEqualTo("NF-e");
+        Document approved = awaitStatus(documentId, DocumentStatus.AUTO_APPROVED);
+        assertThat(approved.getKind()).isEqualTo("NF-e");
         assertThat(extractionRepository.findByDocumentId(documentId))
                 .singleElement()
                 .satisfies(extraction -> assertThat(extraction.getRequestId()).isEqualTo(secondRequestId));
