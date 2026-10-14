@@ -10,11 +10,23 @@ import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.rabbit.retry.ImmediateRequeueMessageRecoverer;
+import org.springframework.amqp.rabbit.retry.MessageRecoverer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitTopologyConfig {
+
+    /**
+     * After the listener's retries are used up the message goes back to its queue instead of being
+     * rejected: these queues have no dead-letter exchange, so a reject would lose a result. Messages
+     * that cannot be read never get here, the dispatcher drops them.
+     */
+    @Bean
+    public MessageRecoverer requeueWhenRetriesAreExhausted() {
+        return new ImmediateRequeueMessageRecoverer();
+    }
 
     /** Declared when the first connection opens; every queue is bound by its own name. */
     @Bean
