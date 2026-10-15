@@ -81,6 +81,10 @@ public class Document {
     @Column(name = "finished_at", length = 24)
     private String finishedAt;
 
+    /** When the pipeline itself finished: its decision or the DLQ. Unlike finishedAt, not moved by a reviewer. */
+    @Column(name = "processed_at", length = 24)
+    private String processedAt;
+
     @Column(name = "created_at", nullable = false, length = 24)
     private String createdAt;
 

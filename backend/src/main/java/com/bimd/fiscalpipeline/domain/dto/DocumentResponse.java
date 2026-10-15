@@ -40,7 +40,8 @@ public record DocumentResponse(
         List<Validation> validations,
         String receivedAt,
         String finishedAt,
-        long durationMs) {
+        long durationMs,
+        long processingMs) {
 
     public record Item(
             String description,

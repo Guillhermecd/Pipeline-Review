@@ -93,6 +93,7 @@ public class ExtractionResultService {
                 SCORE_STAGE,
                 () -> stateService.move(document, decision.status()));
         document.setReason(decision.reason());
+        document.setProcessedAt(now);
         // A document sent to review is not finished: the reviewer has the final word and closes it.
         if (decision.status() == DocumentStatus.AUTO_APPROVED) {
             document.setFinishedAt(now);

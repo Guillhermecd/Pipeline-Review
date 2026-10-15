@@ -95,8 +95,10 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
 
         Document document = awaitStatus(documentId, DocumentStatus.PENDING_REVIEW);
         String reason = "Validação falhou: Soma dos itens = total";
-        // Not finished yet: the reviewer has the final word.
+        // Not finished yet: the reviewer has the final word. The pipeline itself is done, though.
         assertThat(document.getFinishedAt()).isNull();
+        String processedAt = document.getProcessedAt();
+        assertThat(processedAt).isNotNull();
         fetch(documentId, token)
                 .andExpect(jsonPath("$.outcome").value("review"))
                 .andExpect(jsonPath("$.review").doesNotExist())
@@ -148,6 +150,8 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
         correct(documentId, token, "{\"total\":\"1.00\"}").andExpect(status().isConflict());
         assertThat(reviewRepository.findByDocumentId(documentId)).hasSize(1);
         assertThat(documentRepository.findById(documentId).orElseThrow().getFinishedAt()).isEqualTo(finishedAt);
+        // Neither the correction nor the decision moves the end of the automatic processing.
+        assertThat(documentRepository.findById(documentId).orElseThrow().getProcessedAt()).isEqualTo(processedAt);
     }
 
     @Test

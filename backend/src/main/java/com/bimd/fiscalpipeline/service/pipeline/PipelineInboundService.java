@@ -92,7 +92,9 @@ public class PipelineInboundService {
             document.setAttempts(attempts != null ? attempts : envelope.attempt());
             document.setLastError(lastError);
             document.setReason(lastError);
-            document.setFinishedAt(now());
+            String deadLetteredAt = now();
+            document.setFinishedAt(deadLetteredAt);
+            document.setProcessedAt(deadLetteredAt);
             eventPublisher.publish(
                     ServiceName.BROKER,
                     document.getCode(),

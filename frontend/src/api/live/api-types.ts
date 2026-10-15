@@ -41,7 +41,10 @@ export type ApiDocument = {
   validations: Validation[];
   receivedAt: string;
   finishedAt: string | null;
+  // Até finishedAt: num documento em revisão inclui a espera pelo revisor.
   durationMs: number;
+  // Só o processamento automático, até a decisão do pipeline ou a DLQ.
+  processingMs: number;
 };
 
 export type ApiDuplicate = {

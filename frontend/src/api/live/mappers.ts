@@ -37,7 +37,8 @@ export const toPipelineDocument = (doc: ApiDocument): PipelineDocument => ({
   idempotencyKey: doc.idempotencyKey,
   traceId: doc.traceId,
   progress: doc.progress,
-  durationMs: doc.durationMs,
+  // As telas medem o pipeline, não a espera pelo revisor.
+  durationMs: doc.processingMs,
   stage: doc.stage,
   outcome: doc.outcome,
   reason: doc.reason,

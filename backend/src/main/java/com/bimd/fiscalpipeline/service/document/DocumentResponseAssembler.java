@@ -69,10 +69,16 @@ public class DocumentResponseAssembler {
                             confidences.getOrDefault(id, List.of()),
                             validations.getOrDefault(id, List.of()));
                     // A document still in the pipeline has been running until now.
-                    Instant end = document.getFinishedAt() != null ? IsoDates.parse(document.getFinishedAt()) : now;
                     return documentMapper.toResponse(
-                            document, details, IsoDates.millisBetween(document.getReceivedAt(), end));
+                            document,
+                            details,
+                            millisSinceReceived(document, document.getFinishedAt(), now),
+                            millisSinceReceived(document, document.getProcessedAt(), now));
                 })
                 .toList();
+    }
+
+    private static long millisSinceReceived(Document document, String end, Instant now) {
+        return IsoDates.millisBetween(document.getReceivedAt(), end != null ? IsoDates.parse(end) : now);
     }
 }

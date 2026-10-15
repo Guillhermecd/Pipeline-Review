@@ -58,7 +58,7 @@ class DocumentMapperTest {
         Document document = document(status);
         document.setAttempts(2);
 
-        DocumentResponse response = mapper.toResponse(document, DocumentDetails.EMPTY, 0);
+        DocumentResponse response = mapper.toResponse(document, DocumentDetails.EMPTY, 0, 0);
 
         assertThat(response.stage()).isEqualTo(new DocumentResponse.Stage(label, node, service));
         assertThat(response.progress()).isEqualTo(progress);
@@ -68,7 +68,7 @@ class DocumentMapperTest {
 
     @Test
     void should_fillNeutralDefaults_when_documentHasNoExtractionYet() {
-        DocumentResponse response = mapper.toResponse(document(DocumentStatus.RECEIVED), DocumentDetails.EMPTY, 1500);
+        DocumentResponse response = mapper.toResponse(document(DocumentStatus.RECEIVED), DocumentDetails.EMPTY, 1500, 1500);
 
         assertThat(response.reason()).isEmpty();
         assertThat(response.confidence()).isZero();
@@ -89,7 +89,7 @@ class DocumentMapperTest {
         document.setConfidence(new BigDecimal("0.7800"));
         document.setFinishedAt("2026-10-13T13:20:04.000Z");
 
-        DocumentResponse response = mapper.toResponse(document, DocumentDetails.EMPTY, 4000);
+        DocumentResponse response = mapper.toResponse(document, DocumentDetails.EMPTY, 4000, 2500);
 
         assertThat(response.id()).isEqualTo(document.getId());
         assertThat(response.code()).isEqualTo("DOC-1007");
@@ -97,6 +97,8 @@ class DocumentMapperTest {
         assertThat(response.reason()).isEqualTo("Confiança 78% abaixo do limiar 85%");
         assertThat(response.confidence()).isEqualTo(0.78);
         assertThat(response.finishedAt()).isEqualTo("2026-10-13T13:20:04.000Z");
+        assertThat(response.durationMs()).isEqualTo(4000);
+        assertThat(response.processingMs()).isEqualTo(2500);
     }
 
     @Test
@@ -121,7 +123,7 @@ class DocumentMapperTest {
                         new ValidationResult(id, RuleCode.ITEMS_SUM_EQUALS_TOTAL, false, "R$ 271,30 vs R$ 283,80", NOW),
                         new ValidationResult(id, RuleCode.CNPJ_CHECK_DIGIT, true, "DV 04 confere", NOW)));
 
-        DocumentResponse response = mapper.toResponse(document, details, 0);
+        DocumentResponse response = mapper.toResponse(document, details, 0, 0);
 
         assertThat(response.cnpj()).isEqualTo("60.701.190/0001-04");
         assertThat(response.issuer()).isEqualTo("Papelaria Ponto Final");
