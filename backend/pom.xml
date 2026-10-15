@@ -89,6 +89,12 @@
       <version>2.28.16</version>
     </dependency>
 
+    <!-- Manual spans. No-op unless the OpenTelemetry Java agent is attached (see the otel profile below). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.kafka</groupId>
       <artifactId>spring-kafka</artifactId>
@@ -212,4 +218,51 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      ./mvnw spring-boot:run -Potel
+      Baixa o agente Java do OpenTelemetry e sobe a API instrumentada, exportando traces para o Jaeger.
+      Metricas e logs ficam desligados: o Jaeger so recebe traces.
+      JDBC, Hibernate e Spring Data tambem: cada documento gerava centenas de spans de SELECT e
+      Session.merge. Os spans de banco que a tela mostra sao os do PipelineTracer.
+    -->
+    <profile>
+      <id>otel</id>
+      <properties>
+        <otel.agent.version>2.32.0</otel.agent.version>
+        <otel.agent.jar>${project.build.directory}/otel/opentelemetry-javaagent.jar</otel.agent.jar>
+        <otel.endpoint>http://localhost:4318</otel.endpoint>
+        <spring-boot.run.jvmArguments>-javaagent:"${otel.agent.jar}" -Dotel.service.name=fiscal-api -Dotel.exporter.otlp.endpoint=${otel.endpoint} -Dotel.exporter.otlp.protocol=http/protobuf -Dotel.traces.exporter=otlp -Dotel.metrics.exporter=none -Dotel.logs.exporter=none -Dotel.instrumentation.jdbc.enabled=false -Dotel.instrumentation.hibernate.enabled=false -Dotel.instrumentation.spring-data.enabled=false</spring-boot.run.jvmArguments>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-otel-agent</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>copy</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>io.opentelemetry.javaagent</groupId>
+                      <artifactId>opentelemetry-javaagent</artifactId>
+                      <version>${otel.agent.version}</version>
+                      <outputDirectory>${project.build.directory}/otel</outputDirectory>
+                      <destFileName>opentelemetry-javaagent.jar</destFileName>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

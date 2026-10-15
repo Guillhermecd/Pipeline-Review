@@ -47,6 +47,7 @@ public class ReprocessService {
         document.setLastError(null);
         document.setReason(null);
         document.setFinishedAt(null);
+        document.setProcessedAt(null);
 
         outboxWriter.enqueueReceived(document, IsoDates.format(clock.instant()));
         eventPublisher.publish(

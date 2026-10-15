@@ -118,7 +118,7 @@ class DocumentUploadIT extends AbstractIntegrationTest {
         assertThat(stored.asByteArray()).isEqualTo(content);
 
         List<PipelineEventRecord> events =
-                pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode());
+                pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(document.getCode());
         assertThat(events)
                 .extracting(PipelineEventRecord::getMessage, PipelineEventRecord::getLevel)
                 .containsExactly(
@@ -172,7 +172,7 @@ class DocumentUploadIT extends AbstractIntegrationTest {
     void should_rejectUpload_when_userIsNotAuthenticated() throws Exception {
         mockMvc.perform(multipart(DOCUMENTS_URL)
                         .file(new MockMultipartFile("file", "nfe.pdf", "application/pdf", uniqueContent())))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -180,7 +180,7 @@ class DocumentUploadIT extends AbstractIntegrationTest {
         String token = bearerToken().substring("Bearer ".length());
 
         mockMvc.perform(get(DOCUMENTS_URL).param("access_token", token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
 }

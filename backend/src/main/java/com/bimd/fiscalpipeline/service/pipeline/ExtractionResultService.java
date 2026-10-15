@@ -2,6 +2,7 @@ package com.bimd.fiscalpipeline.service.pipeline;
 
 import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
+import com.bimd.fiscalpipeline.domain.enums.PipelineNode;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.domain.model.DocumentItem;
@@ -15,6 +16,7 @@ import com.bimd.fiscalpipeline.repository.FieldConfidenceRepository;
 import com.bimd.fiscalpipeline.repository.FiscalDataRepository;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import com.bimd.fiscalpipeline.service.scoring.ReviewDecider;
+import com.bimd.fiscalpipeline.service.trace.PipelineTracer;
 import com.bimd.fiscalpipeline.service.scoring.ReviewDecider.Decision;
 import com.bimd.fiscalpipeline.service.validation.DocumentEvaluator;
 import com.bimd.fiscalpipeline.service.validation.DocumentEvaluator.Evaluation;
@@ -37,6 +39,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ExtractionResultService {
 
+    private static final String VALIDATE_SPAN = "validate cnpj.dv + soma.itens";
+    private static final String SCORE_SPAN = "score.confianca";
+    private static final String UPDATE_SPAN = "UPDATE documento SET status";
+    private static final String VALIDATION_STAGE = "Validação";
+    private static final String SCORE_STAGE = "Score";
     private static final int MONEY_SCALE = 2;
     /** NUMERIC(14,2) holds 12 integer digits. */
     private static final BigDecimal MONEY_LIMIT = BigDecimal.TEN.pow(12);
@@ -50,6 +57,7 @@ public class ExtractionResultService {
     private final ReviewDecider reviewDecider;
     private final PipelineStateService stateService;
     private final PipelineEventPublisher eventPublisher;
+    private final PipelineTracer tracer;
     private final Clock clock;
 
     /** @param document already moved to EXTRACTED by the state guard */
@@ -62,18 +70,35 @@ public class ExtractionResultService {
         store(document.getId(), data);
 
         stateService.move(document, DocumentStatus.VALIDATING);
-        Evaluation evaluation = documentEvaluator.evaluate(document);
-        log(document, ServiceName.API, "validate cnpj.dv + soma.itens", EventLevel.OK);
-        Decision decision = reviewDecider.decide(evaluation.results(), evaluation.score());
-        log(document, ServiceName.API, "score.confianca", EventLevel.OK);
+        Evaluation evaluation = tracer.inSpan(
+                VALIDATE_SPAN,
+                PipelineTracer.Kind.SERVICE,
+                PipelineNode.VALIDATION,
+                VALIDATION_STAGE,
+                () -> documentEvaluator.evaluate(document));
+        log(document, ServiceName.API, VALIDATE_SPAN, EventLevel.OK);
+        Decision decision = tracer.inSpan(
+                SCORE_SPAN,
+                PipelineTracer.Kind.SERVICE,
+                PipelineNode.VALIDATION,
+                SCORE_STAGE,
+                () -> reviewDecider.decide(evaluation.results(), evaluation.score()));
+        log(document, ServiceName.API, SCORE_SPAN, EventLevel.OK);
 
-        stateService.move(document, decision.status());
+        // The row itself is written when the transaction commits; the span marks the decision being applied.
+        tracer.inSpan(
+                UPDATE_SPAN,
+                PipelineTracer.Kind.DATABASE,
+                PipelineNode.VALIDATION,
+                SCORE_STAGE,
+                () -> stateService.move(document, decision.status()));
         document.setReason(decision.reason());
+        document.setProcessedAt(now);
         // A document sent to review is not finished: the reviewer has the final word and closes it.
         if (decision.status() == DocumentStatus.AUTO_APPROVED) {
             document.setFinishedAt(now);
         }
-        log(document, ServiceName.DB, "UPDATE documento SET status", EventLevel.OK);
+        log(document, ServiceName.DB, UPDATE_SPAN, EventLevel.OK);
         if (decision.status() == DocumentStatus.AUTO_APPROVED) {
             log(document, ServiceName.API, "documento.aprovado (automático)", EventLevel.OK);
         } else {

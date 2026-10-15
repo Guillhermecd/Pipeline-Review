@@ -111,7 +111,7 @@ export function DocumentsCard({ documents }: { documents: PipelineDocument[] }) 
               {doc.fileName}
             </span>
             <span style={{ color: status.tone, fontSize: 12.5 }}>{status.label}</span>
-            <ProgressBar ratio={doc.elapsedMs / doc.durationMs} fill={status.tone} />
+            <ProgressBar ratio={doc.progress} fill={status.tone} />
           </button>
         );
       })}

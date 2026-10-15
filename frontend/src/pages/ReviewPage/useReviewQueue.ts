@@ -6,7 +6,7 @@ import { isPendingReview } from '../../utils/pipeline';
 
 export function useReviewQueue() {
   const { documents, threshold } = usePipeline();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const pending = documents.filter(isPendingReview);
   const reviewed = documents.filter((doc) => doc.outcome === 'review' && doc.review);

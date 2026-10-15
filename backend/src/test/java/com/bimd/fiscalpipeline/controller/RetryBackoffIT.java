@@ -74,7 +74,7 @@ class RetryBackoffIT extends AbstractIntegrationTest {
         mockMvc.perform(get(DOCUMENTS_URL + "/" + documentId).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(jsonPath("$.outcome").value("dlq"))
                 .andExpect(jsonPath("$.reason").value(ERROR));
-        List<PipelineEventRecord> events = pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(dead.getCode());
+        List<PipelineEventRecord> events = pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(dead.getCode());
         assertThat(events)
                 .filteredOn(event -> event.getLevel() == EventLevel.WAIT)
                 .extracting(PipelineEventRecord::getMessage)

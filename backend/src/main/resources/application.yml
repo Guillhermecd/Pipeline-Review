@@ -86,4 +86,6 @@ app:
     broker-default: ${BROKER_DEFAULT:kafka}
     outbox-poll-ms: ${OUTBOX_POLL_MS:500}
     publish-timeout-ms: ${PUBLISH_TIMEOUT_MS:10000}
+    jaeger-query-url: ${JAEGER_QUERY_URL:http://localhost:16686}
+    messaging-simulator-url: ${MESSAGING_SIMULATOR_URL:ws://localhost:8090/events}
     review-confidence-threshold: ${REVIEW_CONFIDENCE_THRESHOLD:0.85}

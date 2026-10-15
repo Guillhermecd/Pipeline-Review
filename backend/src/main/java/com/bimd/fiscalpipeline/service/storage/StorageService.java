@@ -61,4 +61,19 @@ public class StorageService {
 
         return new PresignedUpload(uploadUrl, downloadUrl, key);
     }
+
+    /** A link the browser can open directly for a while, without credentials. */
+    public String createPresignedDownload(String key, Duration validity) {
+        GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
+        return presigner.presignGetObject(GetObjectPresignRequest.builder()
+                        .signatureDuration(validity)
+                        .getObjectRequest(request)
+                        .build())
+                .url()
+                .toString();
+    }
+
+    public Duration presignedUrlValidity() {
+        return Duration.ofSeconds(expiresInSeconds);
+    }
 }

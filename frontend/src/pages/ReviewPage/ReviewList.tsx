@@ -5,9 +5,9 @@ import { confidenceTone } from '../../utils/pipeline';
 
 type ReviewListProps = {
   queue: PipelineDocument[];
-  selectedId: number | null;
+  selectedId: string | null;
   threshold: number;
-  onSelect: (id: number) => void;
+  onSelect: (id: string) => void;
 };
 
 const reviewNote = (doc: PipelineDocument) => {

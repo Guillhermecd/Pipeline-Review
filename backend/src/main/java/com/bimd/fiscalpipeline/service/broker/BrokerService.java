@@ -5,8 +5,10 @@ import com.bimd.fiscalpipeline.domain.dto.BrokerConfigResponse;
 import com.bimd.fiscalpipeline.domain.enums.BrokerKind;
 import com.bimd.fiscalpipeline.domain.enums.EventLevel;
 import com.bimd.fiscalpipeline.domain.enums.ServiceName;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.service.event.PipelineEventPublisher;
 import java.util.concurrent.atomic.AtomicReference;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,10 +22,15 @@ public class BrokerService {
 
     private final AtomicReference<BrokerKind> active;
     private final PipelineEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEvents;
 
-    public BrokerService(PipelineProperties properties, PipelineEventPublisher eventPublisher) {
+    public BrokerService(
+            PipelineProperties properties,
+            PipelineEventPublisher eventPublisher,
+            ApplicationEventPublisher applicationEvents) {
         this.active = new AtomicReference<>(properties.brokerDefault());
         this.eventPublisher = eventPublisher;
+        this.applicationEvents = applicationEvents;
     }
 
     public BrokerKind active() {
@@ -43,7 +50,9 @@ public class BrokerService {
                     "broker alterado para %s · novos documentos usam %s"
                             .formatted(kind.getLabel(), kind.getInputQueue()),
                     EventLevel.OK);
+            applicationEvents.publishEvent(new PipelineChange.BrokerSwitched(kind));
         }
         return BrokerConfigResponse.of(kind);
     }
+
 }

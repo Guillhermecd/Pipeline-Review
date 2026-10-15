@@ -11,7 +11,9 @@ public record PipelineProperties(
         BrokerKind brokerDefault,
         BigDecimal reviewConfidenceThreshold,
         long outboxPollMs,
-        long publishTimeoutMs) {
+        long publishTimeoutMs,
+        String jaegerQueryUrl,
+        String messagingSimulatorUrl) {
 
     private static final long BYTES_PER_MB = 1024L * 1024L;
 

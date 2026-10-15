@@ -78,7 +78,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.validations[2].detail").value("28/09/2026"))
                 .andExpect(jsonPath("$.validations[3].name").value("Campos obrigatórios"))
                 .andExpect(jsonPath("$.validations[3].detail").value("5 de 5 presentes"));
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode()))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(document.getCode()))
                 .extracting(PipelineEventRecord::getMessage)
                 .containsSubsequence(
                         "consume " + broker.getOutputQueue(),
@@ -95,8 +95,10 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
 
         Document document = awaitStatus(documentId, DocumentStatus.PENDING_REVIEW);
         String reason = "Validação falhou: Soma dos itens = total";
-        // Not finished yet: the reviewer has the final word.
+        // Not finished yet: the reviewer has the final word. The pipeline itself is done, though.
         assertThat(document.getFinishedAt()).isNull();
+        String processedAt = document.getProcessedAt();
+        assertThat(processedAt).isNotNull();
         fetch(documentId, token)
                 .andExpect(jsonPath("$.outcome").value("review"))
                 .andExpect(jsonPath("$.review").doesNotExist())
@@ -106,7 +108,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.total").value("283.80"))
                 .andExpect(jsonPath("$.validations[1].ok").value(false))
                 .andExpect(jsonPath("$.validations[1].detail").value("R$ 271,30 vs R$ 283,80"));
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode()))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(document.getCode()))
                 .filteredOn(event -> event.getLevel() == EventLevel.WARN)
                 .extracting(PipelineEventRecord::getMessage)
                 .containsExactly("documento.em_revisao · " + reason);
@@ -134,7 +136,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
         assertThat(review.getDecision()).isEqualTo(ReviewDecision.APPROVED);
         assertThat(review.getReviewerId()).isNotNull();
         assertThat(review.getCorrections()).isEqualTo(Map.of("total", Map.of("from", "283.80", "to", "271.30")));
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode()))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(document.getCode()))
                 .extracting(PipelineEventRecord::getMessage)
                 .endsWith("revisão humana · documento.aprovado publicado");
 
@@ -148,6 +150,8 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
         correct(documentId, token, "{\"total\":\"1.00\"}").andExpect(status().isConflict());
         assertThat(reviewRepository.findByDocumentId(documentId)).hasSize(1);
         assertThat(documentRepository.findById(documentId).orElseThrow().getFinishedAt()).isEqualTo(finishedAt);
+        // Neither the correction nor the decision moves the end of the automatic processing.
+        assertThat(documentRepository.findById(documentId).orElseThrow().getProcessedAt()).isEqualTo(processedAt);
     }
 
     @Test
@@ -181,7 +185,7 @@ class ValidationDecisionIT extends AbstractIntegrationTest {
         assertThat(review.getDecision()).isEqualTo(ReviewDecision.REJECTED);
         assertThat(review.getCorrections())
                 .isEqualTo(Map.of("cnpj", Map.of("from", "60.701.190/0001-05", "to", "12.ABC.345/01DE-35")));
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(document.getCode()))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(document.getCode()))
                 .last()
                 .satisfies(event -> {
                     assertThat(event.getMessage()).isEqualTo("revisão humana · documento.rejeitado");

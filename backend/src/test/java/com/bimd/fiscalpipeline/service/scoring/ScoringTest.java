@@ -94,7 +94,7 @@ class ScoringTest {
     }
 
     private ReviewDecider decider(String threshold) {
-        return new ReviewDecider(new PipelineProperties(10, BrokerKind.KAFKA, new BigDecimal(threshold), 500, 10_000));
+        return new ReviewDecider(new PipelineProperties(10, BrokerKind.KAFKA, new BigDecimal(threshold), 500, 10_000, "http://localhost:16686", "ws://localhost:8090/events"));
     }
 
     private List<RuleResult> allPassed() {

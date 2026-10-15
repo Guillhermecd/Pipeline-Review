@@ -1,6 +1,7 @@
 """Shared test doubles and helpers."""
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,13 @@ from sample_data import Sample
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 FAKE_MODEL = "fake-llm"
 TRACEPARENT = "00-58205aafa3ed1750e5ece79e8bde955d-57e53b06de0e6c94-01"
+TRACE_ID = TRACEPARENT.split("-")[1]
+
+
+def trace_id_of(headers: Mapping[str, str]) -> str:
+    """The trace a message belongs to. Each hop sends its own span id, so only the trace id is stable."""
+    return headers["traceparent"].split("-")[1]
+
 
 # Same weights as the backend's ConfidenceScorer (BACKEND.md §6.5).
 SCORE_WEIGHTS = {"cnpj": 0.25, "total": 0.25, "items": 0.20, "issueDate": 0.15, "issuer": 0.15}

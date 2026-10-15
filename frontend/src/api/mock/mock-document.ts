@@ -7,6 +7,7 @@ import type {
   ReviewDecision,
   SampleDocument,
   Span,
+  Trace,
 } from '../modules/types';
 import { decimal } from '../../utils/format';
 import { TRANSIENT_ERRORS } from './fixtures';
@@ -150,10 +151,17 @@ export const settle = (doc: MockDocument, threshold: number) => {
   doc.reason = decision.reason;
 };
 
+// No backend real os spans vêm do Jaeger; aqui saem do plano do próprio documento.
+export const toTrace = (doc: MockDocument): Trace => ({
+  durationMs: doc.durationMs,
+  elapsedMs: doc.elapsedMs,
+  spans: doc.spans.filter((span) => span.startMs <= doc.elapsedMs),
+});
+
 export const toPipelineDocument = (doc: MockDocument): PipelineDocument => {
   const span = currentSpan(doc);
   return {
-    id: doc.id,
+    id: String(doc.id),
     code: doc.code,
     fileName: doc.fileName,
     kind: doc.sample.kind,
@@ -165,9 +173,9 @@ export const toPipelineDocument = (doc: MockDocument): PipelineDocument => {
     itemsSum: doc.sample.itemsSum,
     idempotencyKey: `sha256:${doc.hash}`,
     traceId: doc.traceId,
-    spans: doc.spans.filter((s) => s.startMs <= doc.elapsedMs),
-    elapsedMs: doc.elapsedMs,
-    durationMs: doc.durationMs,
+    progress: doc.durationMs ? doc.elapsedMs / doc.durationMs : 0,
+    // Como na API: tempo decorrido enquanto processa, tempo total quando termina.
+    durationMs: doc.outcome ? doc.durationMs : doc.elapsedMs,
     stage: { label: span.stage, node: span.node, service: span.service },
     outcome: doc.outcome,
     reason: doc.reason,

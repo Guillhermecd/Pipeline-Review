@@ -99,6 +99,8 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
         registry.add("spring.rabbitmq.addresses", RABBITMQ::getAmqpUrl);
         registry.add("app.pipeline.outbox-poll-ms", () -> "100");
+        // Nothing listens there: the trace endpoint must answer for itself when Jaeger is away.
+        registry.add("app.pipeline.jaeger-query-url", () -> "http://localhost:1");
     }
 
     /** The active broker lives in memory and is shared by every test of the run. */

@@ -1,8 +1,10 @@
-"""Builds and sends the worker's outbound messages: progress, result and dead letters."""
+"""Builds and sends the worker's outbound messages: progress, result, retries and dead letters."""
 
 from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
+
+from opentelemetry.context import Context
 
 from fiscal_worker.domain.errors import ExtractionError
 from fiscal_worker.domain.events import BrokerKind, EventEnvelope, EventType, ProgressPayload, Stage
@@ -14,7 +16,8 @@ from fiscal_worker.messaging.protocols import (
     MessageBroker,
     OutgoingMessage,
 )
-from fiscal_worker.messaging.topology import QueueRole
+from fiscal_worker.messaging.topology import QueueRole, queue_name
+from fiscal_worker.telemetry import tracing
 
 ERROR_HEADER = "x-error"
 ERROR_CLASS_HEADER = "x-error-class"
@@ -41,13 +44,15 @@ class EventPublisher:
     async def extracted(
         self, source: EventEnvelope, incoming: IncomingMessage, payload: ExtractionPayload
     ) -> None:
-        await self._send(
-            QueueRole.OUTPUT,
-            EventType.DOCUMENT_EXTRACTED,
-            source,
-            incoming,
-            payload.model_dump(mode="json", by_alias=True),
-        )
+        name = f"publish {queue_name(incoming.broker, QueueRole.OUTPUT)}"
+        with tracing.span(name, "broker", "Validação", messaging=incoming.broker):
+            await self._send(
+                QueueRole.OUTPUT,
+                EventType.DOCUMENT_EXTRACTED,
+                source,
+                incoming,
+                payload.model_dump(mode="json", by_alias=True),
+            )
 
     async def retry_wait(
         self, source: EventEnvelope, incoming: IncomingMessage, error: ExtractionError, delay_ms: int
@@ -76,19 +81,31 @@ class EventPublisher:
         await self._brokers[incoming.broker].publish_retry(self._message(envelope, incoming), delay_ms)
 
     async def dead_letter(
-        self, incoming: IncomingMessage, error: ExtractionError, attempts: int, document_key: str | None
+        self,
+        incoming: IncomingMessage,
+        error: ExtractionError,
+        attempts: int,
+        document_key: str | None,
+        parent: Context | None = None,
     ) -> None:
-        """The original bytes go as they came, so even a message that failed to parse is preserved."""
-        headers = {
-            **incoming.headers,
-            ERROR_HEADER: str(error),
-            ERROR_CLASS_HEADER: type(error).__name__,
-            ATTEMPTS_HEADER: str(attempts),
-        }
-        message = OutgoingMessage(
-            key=document_key or UNKNOWN_DOCUMENT_KEY, body=incoming.body, headers=headers
-        )
-        await self._brokers[incoming.broker].publish(QueueRole.DEAD_LETTER, message)
+        """The original bytes go as they came, so even a message that failed to parse is preserved.
+
+        `parent` is for a message rejected before any span was opened for it.
+        """
+        name = f"publish {queue_name(incoming.broker, QueueRole.DEAD_LETTER)}"
+        with tracing.span(name, "retry", "DLQ", parent=parent, messaging=incoming.broker) as current:
+            tracing.fail(current, str(error))
+            headers = {
+                **incoming.headers,
+                **_trace_header(incoming),
+                ERROR_HEADER: str(error),
+                ERROR_CLASS_HEADER: type(error).__name__,
+                ATTEMPTS_HEADER: str(attempts),
+            }
+            message = OutgoingMessage(
+                key=document_key or UNKNOWN_DOCUMENT_KEY, body=incoming.body, headers=headers
+            )
+            await self._brokers[incoming.broker].publish(QueueRole.DEAD_LETTER, message)
 
     async def _send(
         self,
@@ -112,11 +129,14 @@ class EventPublisher:
     @staticmethod
     def _message(envelope: EventEnvelope, incoming: IncomingMessage) -> OutgoingMessage:
         """Only the trace context is carried over; broker bookkeeping headers stay behind."""
-        headers = {}
-        if TRACEPARENT_HEADER in incoming.headers:
-            headers[TRACEPARENT_HEADER] = incoming.headers[TRACEPARENT_HEADER]
         return OutgoingMessage(
             key=str(envelope.document_id),
             body=envelope.model_dump_json(by_alias=True).encode(),
-            headers=headers,
+            headers=_trace_header(incoming),
         )
+
+
+def _trace_header(incoming: IncomingMessage) -> dict[str, str]:
+    """The receiver continues from the span that is sending; outside any span, from the sender's."""
+    traceparent = tracing.current_traceparent() or incoming.headers.get(TRACEPARENT_HEADER)
+    return {TRACEPARENT_HEADER: traceparent} if traceparent else {}

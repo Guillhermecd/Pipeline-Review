@@ -34,7 +34,7 @@ public interface DocumentMapper {
     @Mapping(target = "confidence", source = "document.confidence", defaultValue = "0")
     @Mapping(target = "fieldConfidence", source = "details.confidences")
     @Mapping(target = "validations", source = "details.validations")
-    DocumentResponse toResponse(Document document, DocumentDetails details, long durationMs);
+    DocumentResponse toResponse(Document document, DocumentDetails details, long durationMs, long processingMs);
 
     default DocumentResponse.Stage toStage(Document document) {
         DocumentStatus status = document.getStatus();

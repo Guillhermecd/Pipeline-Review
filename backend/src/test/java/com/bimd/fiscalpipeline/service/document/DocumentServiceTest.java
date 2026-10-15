@@ -90,7 +90,7 @@ class DocumentServiceTest {
     @BeforeEach
     void setUp() {
         PipelineProperties properties =
-                new PipelineProperties(1, BrokerKind.KAFKA, new BigDecimal("0.85"), 500, 10_000);
+                new PipelineProperties(1, BrokerKind.KAFKA, new BigDecimal("0.85"), 500, 10_000, "http://localhost:16686", "ws://localhost:8090/events");
         Clock clock = Clock.fixed(Instant.parse("2026-10-13T13:20:00Z"), ZoneOffset.UTC);
         service = new DocumentService(
                 documentRepository,
@@ -106,7 +106,8 @@ class DocumentServiceTest {
                         validationResultRepository,
                         documentMapper,
                         clock),
-                properties);
+                properties,
+                clock);
     }
 
     @Test
@@ -122,8 +123,8 @@ class DocumentServiceTest {
         String expectedFileKey = "documents/" + HASH + "/nota_fiscal.pdf";
         verify(storageService).upload(expectedFileKey, "application/pdf", CONTENT);
         verify(documentRegistrar).register(USER_ID, upload, IDEMPOTENCY_KEY, expectedFileKey);
-        // 13:20:00 (fixed clock) minus 13:19:58 (receivedAt).
-        verify(documentMapper).toResponse(registered, DocumentDetails.EMPTY, 2000L);
+        // 13:20:00 (fixed clock) minus 13:19:58 (receivedAt); still running, so processing counts the same.
+        verify(documentMapper).toResponse(registered, DocumentDetails.EMPTY, 2000L, 2000L);
     }
 
     @Test

@@ -1,5 +1,7 @@
 import { PipelineService } from '../../api/modules/pipeline.service';
-import type { BrokerKind } from '../../api/modules/types';
+import { AuthService } from '../../api/modules/auth.service';
+import type { BrokerKind, SimulationSpeed } from '../../api/modules/types';
+import { IS_LIVE, LOGIN_PATH } from '../../config';
 import { usePipeline } from '../../hooks/usePipeline';
 import { fixed, font, mono } from '../../theme';
 
@@ -17,7 +19,7 @@ const outlined = {
   borderRadius: 6,
 } as const;
 
-// Rodapé da sidebar: broker ativo e controles do modo demo.
+// Rodapé da sidebar: broker ativo e, conforme o modo, controles da simulação ou saída da sessão.
 export function SimulationControls() {
   const { broker, paused, speed, autoTraffic } = usePipeline();
 
@@ -70,6 +72,37 @@ export function SimulationControls() {
           );
         })}
       </div>
+      {IS_LIVE ? (
+        <LogoutButton />
+      ) : (
+        <MockControls paused={paused} speed={speed} autoTraffic={autoTraffic} />
+      )}
+    </div>
+  );
+}
+
+function LogoutButton() {
+  const logout = () => {
+    AuthService.logout();
+    window.location.assign(LOGIN_PATH);
+  };
+  return (
+    <button
+      type="button"
+      onClick={logout}
+      style={{ ...outlined, fontFamily: font.sans, fontSize: 12.5 }}
+    >
+      Sair
+    </button>
+  );
+}
+
+type MockControlsProps = { paused: boolean; speed: SimulationSpeed; autoTraffic: boolean };
+
+// Pausa, velocidade e tráfego automático só fazem sentido na simulação.
+function MockControls({ paused, speed, autoTraffic }: MockControlsProps) {
+  return (
+    <>
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           type="button"
@@ -114,6 +147,6 @@ export function SimulationControls() {
         />
         {autoTraffic ? 'Tráfego automático ligado' : 'Tráfego automático desligado'}
       </button>
-    </div>
+    </>
   );
 }

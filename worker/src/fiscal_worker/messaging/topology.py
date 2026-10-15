@@ -59,3 +59,13 @@ def rabbit_retry_arguments(delay_ms: int) -> dict[str, Any]:
 def retry_delay_ms(attempt: int) -> int | None:
     """Wait before trying again after `attempt` failed, or None when the retries are used up."""
     return RETRY_BACKOFF_MS[attempt - 1] if attempt <= len(RETRY_BACKOFF_MS) else None
+
+
+def queue_name(broker: str, role: QueueRole) -> str:
+    """The topic or queue of a role on a broker, as the screens name it."""
+    return KAFKA_TOPICS[role] if broker == "kafka" else RABBIT_QUEUES[role]
+
+
+def retry_queue_label(broker: str) -> str:
+    """One name for the retry queue on screen; RabbitMQ has one queue per delay behind it."""
+    return KAFKA_RETRY_TOPIC if broker == "kafka" else "extracao.retry (TTL)"

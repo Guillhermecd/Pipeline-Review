@@ -6,6 +6,7 @@ import { Tag } from '../../components/ui/Primitives';
 import { color, mono } from '../../theme';
 import { percent } from '../../utils/format';
 import { confidenceTone } from '../../utils/pipeline';
+import { DocumentPreview } from './DocumentPreview';
 import { ExtractedFields } from './ExtractedFields';
 import { ItemsTable, ValidationGrid } from './ReviewChecks';
 
@@ -83,32 +84,7 @@ export function ReviewDetail({ doc, threshold, onApprove, onReject }: ReviewDeta
             minWidth: 140,
           }}
         >
-          {/* Placeholder do documento: trocar pela imagem/PDF via URL pré-assinada do MinIO */}
-          <div
-            style={{
-              height: 220,
-              borderRadius: 8,
-              border: `1px solid ${color.line}`,
-              background: `repeating-linear-gradient(135deg, ${color.bg} 0 8px, ${color.stripe} 8px 16px)`,
-              display: 'flex',
-              alignItems: 'flex-end',
-              padding: 10,
-              boxSizing: 'border-box',
-            }}
-          >
-            <span
-              style={{
-                ...mono(10.5),
-                color: color.muted,
-                background: color.panel,
-                padding: '3px 6px',
-                borderRadius: 3,
-                wordBreak: 'break-all',
-              }}
-            >
-              {doc.fileName}
-            </span>
-          </div>
+          <DocumentPreview key={doc.id} doc={doc} />
           <Button
             variant="secondary"
             onClick={() => navigate(`/traces/${doc.code}`)}

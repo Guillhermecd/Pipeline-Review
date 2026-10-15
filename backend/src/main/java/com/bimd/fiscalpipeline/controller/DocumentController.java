@@ -1,6 +1,7 @@
 package com.bimd.fiscalpipeline.controller;
 
 import com.bimd.fiscalpipeline.domain.dto.DocumentCorrectionRequest;
+import com.bimd.fiscalpipeline.domain.dto.DocumentFileResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentResponse;
 import com.bimd.fiscalpipeline.domain.dto.DocumentUpload;
 import com.bimd.fiscalpipeline.security.CustomUserDetails;
@@ -49,6 +50,11 @@ public class DocumentController {
     @GetMapping("/{id}")
     public DocumentResponse getById(@PathVariable UUID id) {
         return documentService.getById(id);
+    }
+
+    @GetMapping("/{id}/arquivo")
+    public DocumentFileResponse getFileLink(@PathVariable UUID id) {
+        return documentService.getFileLink(id);
     }
 
     @PostMapping("/{id}/reprocessar")

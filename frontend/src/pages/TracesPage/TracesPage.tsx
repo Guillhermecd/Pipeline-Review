@@ -6,6 +6,7 @@ import { color, fixed, mono } from '../../theme';
 import { duration } from '../../utils/format';
 import { documentStatus } from '../../utils/pipeline';
 import { TraceWaterfall } from './TraceWaterfall';
+import { useTrace } from './useTrace';
 
 const RECENT_TRACES = 16;
 
@@ -14,6 +15,7 @@ export function TracesPage() {
   const { documentCode } = useParams();
   const navigate = useNavigate();
   const selected = documents.find((doc) => doc.code === documentCode) ?? documents[0];
+  const { trace, error } = useTrace(selected);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -36,7 +38,7 @@ export function TracesPage() {
         >
           {documents.slice(0, RECENT_TRACES).map((doc) => {
             const active = doc.id === selected?.id;
-            const elapsed = doc.outcome ? duration(doc.durationMs) : `${duration(doc.elapsedMs)}…`;
+            const elapsed = duration(doc.durationMs) + (doc.outcome ? '' : '…');
             return (
               <button
                 key={doc.id}
@@ -67,7 +69,7 @@ export function TracesPage() {
             );
           })}
         </div>
-        {selected && <TraceWaterfall doc={selected} />}
+        {selected && <TraceWaterfall doc={selected} trace={trace} error={error} />}
       </div>
     </div>
   );

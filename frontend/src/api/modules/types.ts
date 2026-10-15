@@ -19,6 +19,14 @@ export type Span = {
   status: SpanStatus;
 };
 
+// Spans de um documento. `elapsedMs` é quanto do trace já aconteceu (igual a `durationMs` quando
+// o trace está completo); `null` no lugar do trace quer dizer que ele ainda não está disponível.
+export type Trace = {
+  durationMs: number;
+  elapsedMs: number;
+  spans: Span[];
+};
+
 export type LineItem = {
   description: string;
   quantity: number;
@@ -37,8 +45,10 @@ export type DocumentStage = {
   service: ServiceName;
 };
 
+// O que as telas mostram de um documento. No modo live vem do DocumentResponse da API
+// (ver api/live/mappers.ts); valores ausentes chegam como texto vazio.
 export type PipelineDocument = {
-  id: number;
+  id: string;
   code: string;
   fileName: string;
   kind: string;
@@ -50,8 +60,9 @@ export type PipelineDocument = {
   itemsSum: number;
   idempotencyKey: string;
   traceId: string;
-  spans: Span[];
-  elapsedMs: number;
+  // Avanço no pipeline, de 0 a 1.
+  progress: number;
+  // Tempo de processamento até agora (em andamento) ou total (concluído).
   durationMs: number;
   stage: DocumentStage;
   outcome: Outcome | null;

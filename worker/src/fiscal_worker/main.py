@@ -17,6 +17,7 @@ from fiscal_worker.messaging.rabbitmq import RabbitMqBroker
 from fiscal_worker.publishers.event_publisher import EventPublisher
 from fiscal_worker.services.extraction_service import ExtractionService
 from fiscal_worker.storage.s3_file_store import S3FileStore
+from fiscal_worker.telemetry import tracing
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ async def serve(settings: Settings) -> None:
     )
     consumer = DocumentConsumer(service, EventPublisher(brokers))
 
+    provider = tracing.configure(settings.otel_service_name, settings.otel_exporter_otlp_endpoint or None)
     log.info("Loading OCR models")
     await ocr.start()
     try:
@@ -55,6 +57,8 @@ async def serve(settings: Settings) -> None:
                 tasks.create_task(keep_consuming(broker, consumer.handle), name=f"consume-{broker.kind}")
     finally:
         ocr.close()
+        # Sends the spans still in the buffer.
+        provider.shutdown()
 
 
 async def keep_consuming(broker: MessageBroker, handler: MessageHandler) -> None:

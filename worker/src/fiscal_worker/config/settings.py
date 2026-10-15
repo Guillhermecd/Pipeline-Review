@@ -21,4 +21,8 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = Field(default=30, gt=0)
 
     ocr_lang: str = "pt"
+
+    otel_service_name: str = "fiscal-worker"
+    # OTLP over HTTP (Jaeger: http://localhost:4318). Empty: spans are created but not exported.
+    otel_exporter_otlp_endpoint: str | None = None
     log_level: str = "INFO"

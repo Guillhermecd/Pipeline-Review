@@ -70,7 +70,7 @@ class BrokerSwitchIT extends AbstractIntegrationTest {
         assertThat(kafkaDocument.getBroker()).isEqualTo(BrokerKind.KAFKA);
         worker().awaitInput(BrokerKind.KAFKA, kafkaDocumentId, kafkaDocument.getCurrentRequestId());
 
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc("—"))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc("—"))
                 .extracting(PipelineEventRecord::getMessage)
                 .contains("broker alterado para RabbitMQ · novos documentos usam extracao.q");
     }
@@ -89,7 +89,7 @@ class BrokerSwitchIT extends AbstractIntegrationTest {
     @Test
     void should_rejectSwitch_when_userIsNotAuthenticated() throws Exception {
         mockMvc.perform(put(BROKER_URL).contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"rabbitmq\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         assertThat(brokerService.active()).isEqualTo(BrokerKind.KAFKA);
     }

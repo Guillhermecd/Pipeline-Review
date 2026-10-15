@@ -4,6 +4,7 @@ import type {
   PipelineSnapshot,
   SampleDocument,
   SimulationSpeed,
+  Trace,
 } from '../modules/types';
 import { BROKERS } from './fixtures';
 import { EventLog } from './event-log';
@@ -14,6 +15,7 @@ import {
   settle,
   shortHash,
   toPipelineDocument,
+  toTrace,
   type MockDocument,
 } from './mock-document';
 
@@ -90,7 +92,7 @@ export class MockPipelineEngine {
     this.publish();
   }
 
-  review(id: number, decision: 'approved' | 'rejected') {
+  review(id: string, decision: 'approved' | 'rejected') {
     const doc = this.find(id);
     if (!doc || doc.review) return;
     doc.review = decision;
@@ -102,14 +104,14 @@ export class MockPipelineEngine {
     this.publish();
   }
 
-  edit(id: number, field: EditableField, value: string) {
+  edit(id: string, field: EditableField, value: string) {
     const doc = this.find(id);
     if (!doc || doc.review) return;
     editField(doc, field, value);
     this.publish();
   }
 
-  reprocess(id: number) {
+  reprocess(id: string) {
     const doc = this.find(id);
     if (!doc || doc.outcome !== 'dlq') return;
     restartForReprocess(doc, BROKERS[this.broker]);
@@ -117,6 +119,11 @@ export class MockPipelineEngine {
     this.log.push('api', doc.code, message, 'ok');
     this.advance(doc, 0);
     this.publish();
+  }
+
+  getTrace(id: string): Trace | null {
+    const doc = this.find(id);
+    return doc ? toTrace(doc) : null;
   }
 
   setBroker(kind: BrokerKind) {
@@ -183,8 +190,8 @@ export class MockPipelineEngine {
     this.log.push('api', doc.code, message, approved ? 'ok' : 'warn');
   }
 
-  private find(id: number) {
-    return this.documents.find((doc) => doc.id === id);
+  private find(id: string) {
+    return this.documents.find((doc) => String(doc.id) === id);
   }
 
   private update(mutate: () => void) {

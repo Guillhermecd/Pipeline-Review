@@ -60,7 +60,7 @@ class PipelineInboundServiceTest {
                 documentRepository,
                 processedEventRepository,
                 extractionResultService,
-                new PipelineStateService(clock),
+                new PipelineStateService(clock, event -> {}),
                 eventPublisher,
                 clock);
     }

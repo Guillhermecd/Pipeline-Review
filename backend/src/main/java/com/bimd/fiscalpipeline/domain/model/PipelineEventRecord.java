@@ -40,4 +40,8 @@ public class PipelineEventRecord {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 8)
     private EventLevel level;
+
+    /** Assigned by the database: the order events were written in, which timestamps alone cannot tell. */
+    @Column(insertable = false, updatable = false)
+    private Long sequence;
 }

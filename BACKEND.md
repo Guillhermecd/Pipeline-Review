@@ -348,7 +348,7 @@ Nomes de tabela e coluna em inglês, `snake_case`. Datas como `VARCHAR(24)` em I
 
 | Tabela | Colunas principais | Restrições |
 |---|---|---|
-| `documents` | `id UUID`, `code VARCHAR(16)` (`DOC-1001`, sequence `document_code_seq` começando em 1001), `user_id`, `file_name`, `file_key`, `mime_type`, `idempotency_key VARCHAR(80)`, `broker`, `status`, `kind`, `trace_id CHAR(32)`, `current_request_id UUID`, `attempts INT`, `last_error`, `reason`, `confidence NUMERIC(5,4)`, `received_at`, `finished_at`, `created_at`, `updated_at` | UNIQUE `idempotency_key`; UNIQUE `code`; índice `(created_at DESC)`; índice `(status)` |
+| `documents` | `id UUID`, `code VARCHAR(16)` (`DOC-1001`, sequence `document_code_seq` começando em 1001), `user_id`, `file_name`, `file_key`, `mime_type`, `idempotency_key VARCHAR(80)`, `broker`, `status`, `kind`, `trace_id CHAR(32)`, `current_request_id UUID`, `attempts INT`, `last_error`, `reason`, `confidence NUMERIC(5,4)`, `received_at`, `finished_at`, `processed_at`, `created_at`, `updated_at` | UNIQUE `idempotency_key`; UNIQUE `code`; índice `(created_at DESC)`; índice `(status)` |
 | `fiscal_data` | `document_id PK/FK`, `cnpj VARCHAR(18)`, `issuer`, `issue_date VARCHAR(10)`, `total NUMERIC(14,2)`, `items_sum NUMERIC(14,2)` | |
 | `field_confidences` | `document_id`, `field` (`CNPJ`, `ISSUER`, `ISSUE_DATE`, `TOTAL`, `ITEMS`), `confidence NUMERIC(5,4)`, `source` | PK `(document_id, field)` |
 | `document_items` | `id`, `document_id`, `line INT`, `description`, `quantity NUMERIC(12,3)`, `unit_price NUMERIC(14,2)` | |
@@ -514,6 +514,7 @@ type DocumentResponse = {
   receivedAt: string;            // ISO 8601
   finishedAt: string | null;
   durationMs: number;            // finishedAt (ou agora) − receivedAt
+  processingMs: number;          // processedAt (ou agora) − receivedAt: só o pipeline, sem a espera do revisor
 };
 
 type DuplicateDocumentResponse = {

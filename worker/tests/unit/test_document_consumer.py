@@ -1,8 +1,13 @@
 import json
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from fiscal_worker.consumers.document_consumer import DocumentConsumer
 from fiscal_worker.domain.errors import TransientError
@@ -13,9 +18,11 @@ from fiscal_worker.messaging.protocols import IncomingMessage
 from fiscal_worker.messaging.topology import QueueRole
 from fiscal_worker.publishers.event_publisher import EventPublisher
 from fiscal_worker.services.extraction_service import ExtractionService
+from fiscal_worker.telemetry import tracing
 from generate_samples import render_pdf
 from sample_data import SAMPLES_BY_KEY
 from support import (
+    TRACE_ID,
     TRACEPARENT,
     FakeFileStore,
     FakeLlm,
@@ -23,6 +30,7 @@ from support import (
     RecordingBroker,
     load_schema,
     received_envelope,
+    trace_id_of,
     truth,
 )
 
@@ -94,7 +102,8 @@ async def test_every_outbound_message_keeps_the_identity_it_received() -> None:
         body = json.loads(message.body)
         for key in ("documentId", "documentCode", "idempotencyKey", "requestId", "attempt", "broker"):
             assert body[key] == envelope[key]
-        assert message.headers == {"traceparent": TRACEPARENT}
+        assert set(message.headers) == {"traceparent"}
+        assert trace_id_of(message.headers) == TRACE_ID
         assert message.key == envelope["documentId"]
         event_ids.add(body["eventId"])
     assert len(event_ids) == 3
@@ -138,7 +147,7 @@ async def test_poison_message_goes_to_the_dead_letter_queue_untouched(body: byte
     assert message.headers["x-error"].startswith("mensagem fora do schema")
     assert message.headers["x-error-class"] == "PermanentError"
     assert message.headers["x-attempts"] == "1"
-    assert message.headers["traceparent"] == TRACEPARENT
+    assert trace_id_of(message.headers) == TRACE_ID
     assert harness.llm.received_text == []
 
 
@@ -169,7 +178,8 @@ async def test_transient_failure_is_parked_for_a_retry_with_backoff(attempt: int
     assert retry["eventId"] != envelope["eventId"]
     for key in ("documentId", "documentCode", "idempotencyKey", "requestId", "broker", "payload"):
         assert retry[key] == envelope[key]
-    assert message.headers == {"traceparent": TRACEPARENT}
+    assert set(message.headers) == {"traceparent"}
+    assert trace_id_of(message.headers) == TRACE_ID
     assert message.key == envelope["documentId"]
 
 
@@ -240,3 +250,103 @@ async def test_broker_failure_propagates_so_the_message_is_redelivered() -> None
 
     with pytest.raises(ConnectionError):
         await harness.deliver(received_envelope())
+
+
+@pytest.fixture
+def spans() -> Iterator[InMemorySpanExporter]:
+    """Collects the spans of one test, then puts back a provider that exports nothing."""
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    tracing.use(provider)
+    yield exporter
+    tracing.use(TracerProvider())
+
+
+def by_name(exporter: InMemorySpanExporter) -> dict[str, ReadableSpan]:
+    return {span.name: span for span in exporter.get_finished_spans()}
+
+
+async def test_traces_one_document_under_the_trace_it_arrived_with(spans: InMemorySpanExporter) -> None:
+    harness = Harness()
+
+    await harness.deliver(received_envelope())
+
+    recorded = by_name(spans)
+    assert set(recorded) == {
+        "consume documentos.recebidos",
+        "ocr.pdf_text",
+        "llm.extract (json schema)",
+        "publish documentos.extraidos",
+    }
+    assert {format(span.context.trace_id, "032x") for span in recorded.values()} == {TRACE_ID}
+    consume = recorded["consume documentos.recebidos"]
+    assert consume.parent is not None
+    assert format(consume.parent.span_id, "016x") == TRACEPARENT.split("-")[2]
+    assert consume.attributes == {"pipeline.node": "worker", "pipeline.stage": "OCR"}
+    assert recorded["ocr.pdf_text"].attributes == {"pipeline.node": "worker", "pipeline.stage": "OCR"}
+    assert recorded["llm.extract (json schema)"].attributes == {
+        "pipeline.node": "worker",
+        "pipeline.stage": "Extração",
+    }
+    publish = recorded["publish documentos.extraidos"]
+    assert publish.attributes == {
+        "pipeline.node": "broker",
+        "pipeline.stage": "Validação",
+        "messaging.system": "kafka",
+    }
+    # The API continues from the span that published the result.
+    _, result = harness.kafka.published[-1]
+    assert result.headers["traceparent"].split("-")[2] == format(publish.context.span_id, "016x")
+
+
+async def test_traces_the_wait_and_the_failure_of_a_retry(spans: InMemorySpanExporter) -> None:
+    harness = Harness(llm=FakeLlm(error=TransientError("LLM 503 Service Unavailable")))
+    envelope = {**received_envelope(), "eventType": "documento.retry", "attempt": 2}
+
+    await harness.deliver(envelope)
+
+    recorded = by_name(spans)
+    wait = recorded["retry +1s → documentos.recebidos-retry"]
+    assert wait.attributes == {
+        "pipeline.node": "retry",
+        "pipeline.stage": "Retry 1/3",
+        "pipeline.span.status": "wait",
+        "messaging.system": "kafka",
+    }
+    # It starts when the retry message was written: 2026-10-13T13:20:00.000Z.
+    assert wait.start_time == 1_791_897_600_000_000_000
+    assert "consume documentos.recebidos · tentativa 2" in recorded
+    failed = recorded["llm.extract → LLM 503 Service Unavailable"]
+    assert failed.status.status_code is StatusCode.ERROR
+    assert {format(span.context.trace_id, "032x") for span in recorded.values()} == {TRACE_ID}
+
+
+async def test_traces_the_dead_letter_as_a_failed_broker_span(spans: InMemorySpanExporter) -> None:
+    harness = Harness(llm=FakeLlm(error=TransientError("429 rate limit excedido")))
+
+    await harness.deliver(
+        {**received_envelope(BrokerKind.RABBITMQ), "eventType": "documento.retry", "attempt": 4},
+        broker=BrokerKind.RABBITMQ,
+    )
+
+    recorded = by_name(spans)
+    dead = recorded["publish extracao.dlq"]
+    assert dead.status.status_code is StatusCode.ERROR
+    assert dead.status.description == "429 rate limit excedido"
+    assert dead.attributes == {
+        "pipeline.node": "retry",
+        "pipeline.stage": "DLQ",
+        "messaging.system": "rabbitmq",
+    }
+    assert "retry +4s → extracao.retry (TTL)" in recorded
+    assert "consume extracao.q · tentativa 4" in recorded
+
+
+async def test_poison_message_keeps_the_trace_it_arrived_with(spans: InMemorySpanExporter) -> None:
+    harness = Harness()
+
+    await harness.deliver(b"not json")
+
+    assert set(by_name(spans)) == {"publish documentos.recebidos.DLT"}
+    assert trace_id_of(harness.kafka.published[0][1].headers) == TRACE_ID

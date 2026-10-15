@@ -3,6 +3,7 @@ package com.bimd.fiscalpipeline.service.pipeline;
 import com.bimd.fiscalpipeline.domain.enums.DocumentStatus;
 import com.bimd.fiscalpipeline.domain.model.Document;
 import com.bimd.fiscalpipeline.exception.IllegalStateTransitionException;
+import com.bimd.fiscalpipeline.service.event.PipelineChange;
 import com.bimd.fiscalpipeline.util.IsoDates;
 import java.time.Clock;
 import java.util.EnumMap;
@@ -10,6 +11,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -52,6 +54,7 @@ public class PipelineStateService {
     }
 
     private final Clock clock;
+    private final ApplicationEventPublisher applicationEvents;
 
     public boolean canMove(DocumentStatus from, DocumentStatus to) {
         return ALLOWED.getOrDefault(from, Set.of()).contains(to);
@@ -64,6 +67,7 @@ public class PipelineStateService {
         }
         document.setStatus(to);
         document.setUpdatedAt(IsoDates.format(clock.instant()));
+        applicationEvents.publishEvent(new PipelineChange.DocumentChanged(document.getId()));
     }
 
     private static void allow(DocumentStatus from, DocumentStatus first, DocumentStatus... others) {

@@ -89,10 +89,10 @@ class IdempotencyIT extends AbstractIntegrationTest {
         assertThat(outboxEventRepository.findByDocumentId(documentId)).hasSize(1);
 
         // The duplicate is logged against no document ("—"), the accepted upload against its code.
-        assertThat(pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc(code))
+        assertThat(pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc(code))
                 .filteredOn(event -> event.getMessage().equals("POST /api/v1/documentos"))
                 .hasSize(1);
-        List<PipelineEventRecord> duplicates = pipelineEventRepository.findByDocumentCodeOrderByOccurredAtAsc("—");
+        List<PipelineEventRecord> duplicates = pipelineEventRepository.findByDocumentCodeOrderBySequenceAsc("—");
         assertThat(duplicates)
                 .filteredOn(event -> event.getMessage()
                         .equals("409 duplicado · sha256:" + hash.substring(0, 8) + " já processado"))

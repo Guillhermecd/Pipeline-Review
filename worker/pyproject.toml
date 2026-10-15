@@ -18,6 +18,8 @@ dependencies = [
     "pydantic-settings>=2.6",
     "pymupdf>=1.24",
     "pyzbar>=0.1.9",
+    "opentelemetry-sdk>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
 ]
 
 [project.scripts]
